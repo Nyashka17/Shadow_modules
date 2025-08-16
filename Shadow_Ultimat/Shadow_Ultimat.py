@@ -45,7 +45,7 @@ class ShadowUltimatMod(loader.Module):
     def load_module_from_string(self, name, code):
         """Динамическая загрузка модуля из строки."""
         try:
-            # Заменяем относительные импорты на безопасные заглушки
+            # Удаляем относительные импорты для избежания ошибок
             code = code.replace("from .. import loader, utils", "")
             spec = importlib.util.spec_from_loader(name, loader=None)
             module = importlib.util.module_from_spec(spec)
@@ -53,7 +53,7 @@ class ShadowUltimatMod(loader.Module):
             exec(code, module.__dict__)
             return module
         except Exception as e:
-            print(f"Ошибка загрузки модуля {name}: {e}")
+            print(f"Ошибка загрузки модуля {name}: {str(e)}")  # Исправленная строка
             return None
 
     def fetch_module(self, url):
@@ -63,7 +63,7 @@ class ShadowUltimatMod(loader.Module):
             response.raise_for_status()
             return response.text
         except requests.RequestException as e:
-            print(f"Ошибка загрузки модуля с {url}: {e}")
+            print(f"Ошибка загрузки модуля с {url}: {str(e)}")
             return None
 
     def load_modules(self):
@@ -135,7 +135,7 @@ class ShadowUltimatMod(loader.Module):
                     f.write(main_code)
                 await utils.answer(message, "✅ Все модули и основной модуль обновлены! Перезагрузите бота для применения изменений.")
             except Exception as e:
-                await utils.answer(message, f"❌ Ошибка при обновлении основного модуля: {e}")
+                await utils.answer(message, f"❌ Ошибка при обновлении основного модуля: {str(e)}")
         else:
             await utils.answer(message, "❌ Не удалось загрузить основной модуль.")
 
@@ -157,7 +157,7 @@ class ShadowUltimatMod(loader.Module):
                     else:
                         updates.append(f"❌ {name}: Не удалось загрузить модуль")
                 except Exception as e:
-                    updates.append(f"❌ {name}: Ошибка при проверке ({e})")
+                    updates.append(f"❌ {name}: Ошибка при проверке ({str(e)})")
             else:
                 updates.append(f"❌ {name}: Не удалось загрузить")
         reply = "📋 Результаты проверки обновлений:\n" + "\n".join(updates) if updates else "✅ Все модули актуальны!"
@@ -214,16 +214,10 @@ class ShadowUltimatMod(loader.Module):
                 status = "включен" if module.STATE else "выключен"
                 await utils.answer(message, f"✅ {module_name}: Автофарм {status}")
             except Exception as e:
-                await utils.answer(message, f"❌ Ошибка при переключении {module_name}: {e}")
+                await utils.answer(message, f"❌ Ошибка при переключении {module_name}: {str(e)}")
         else:
             await utils.answer(message, f"❌ Модуль {module_name} не загружен")
 
     async def client_ready(self, client, db):
         """Инициализация модуля при запуске клиента."""
-        self.load_modules()_name}: {e}")
-        else:
-            await utils.answer(message, f"❌ Модуль {module_name} не загружен")
-
-    async def client_ready(self, client, db):
-        """Initialize module on client ready."""
         self.load_modules()
