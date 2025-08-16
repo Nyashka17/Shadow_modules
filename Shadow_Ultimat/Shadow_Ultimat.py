@@ -25,7 +25,7 @@
 # scope: hikka_min 1.3.0
 
 from herokutl.types import Message
-from .. import loader, utils
+from heroku import loader, utils  # Абсолютный импорт
 
 @loader.tds
 class Shadow_Ultimat(loader.Module):
