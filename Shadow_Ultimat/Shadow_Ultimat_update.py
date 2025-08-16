@@ -24,7 +24,7 @@ import asyncio
 import pathlib
 import logging
 from herokutl.types import Message
-from .. import loader, utils
+from heroku import loader, utils  # Абсолютный импорт вместо относительного
 
 @loader.tds
 class ShadowUpdate(loader.Module):
@@ -51,11 +51,6 @@ class ShadowUpdate(loader.Module):
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             self.log.addHandler(handler)
-
-    async def client_ready(self, client, db):
-        """Initialize database and load Shadow_Ultimat"""
-        self._db = db
-        self.log.debug("Initializing ShadowUpdate module")
         # Инициализация config
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
@@ -65,6 +60,11 @@ class ShadowUpdate(loader.Module):
                 validator=loader.validators.String()
             )
         )
+
+    async def client_ready(self, client, db):
+        """Initialize database and load Shadow_Ultimat"""
+        self._db = db
+        self.log.debug("Initializing ShadowUpdate module")
         if "ShadowUpdate" not in self._db:
             self._db["ShadowUpdate"] = {}
             self.log.info("Initialized new ShadowUpdate database entry")
