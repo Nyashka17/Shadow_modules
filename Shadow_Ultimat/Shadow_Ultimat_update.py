@@ -1,5 +1,24 @@
+# ---------------------------------------------------------------------------------
+#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
+# ( o.o )  🔐 Licensed under the GNU AGPLv3.
+#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
+# ---------------------------------------------------------------------------------
+# Name: ShadowUpdate
+# Author: @familiarrrrrr
+# Commands:
+# .check
+# .shupdate
+# .log
+# ---------------------------------------------------------------------------------
+
+# meta pic: https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/update_icon.png
+# meta banner: https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/update_banner.jpg
+# meta developer: @familiarrrrrr
+# scope: hikka_only
+# scope: hikka_min 1.3.0
+
 from herokutl.types import Message
-from .. import loader, utils  # Оставляем как есть, но проверим позже
+from .. import loader, utils
 import requests
 import importlib.util
 import os
@@ -22,33 +41,18 @@ class ShadowUpdate(loader.Module):
     }
     strings_ru = strings
 
-    def __init__(self):
-        self.config = loader.ModuleConfig(
-            loader.ConfigValue("current_version", "7.7.7", "Current module version", validator=loader.validators.String()),
-        )
-        self.module_urls = [
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Bonus.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Garden.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Greenhouse.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Guild.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Mine.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_People.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Petrol.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Wasteland.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_Guild.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_People.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_Profile.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_update.py"
-        ]
-
     async def client_ready(self, client, db):
-        """Initialize database when client is ready"""
+        """Initialize database and import Shadow_Ultimat"""
         self._db = db
         if "ShadowUpdate" not in self._db:
             self._db["ShadowUpdate"] = {}
         if "update_log" not in self._db["ShadowUpdate"]:
             self._db["ShadowUpdate"]["update_log"] = "Изначальная установка: 7.7.7"
+        # Динамическая загрузка Shadow_Ultimat
+        self.shadow_ultimat = await self.import_lib(
+            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat.py",
+            suspend_on_error=True,
+        )
 
     def reload_module(self, module_name, file_path):
         spec = importlib.util.spec_from_file_location(module_name, file_path)
@@ -62,7 +66,7 @@ class ShadowUpdate(loader.Module):
         """Check for available updates"""
         current_version = self.config["current_version"]
         module_dir = "."  # Используем текущую директорию
-        main_url = self.module_urls[0]  # URL for Shadow_Ultimat.py
+        main_url = "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat.py"
         response = requests.get(main_url)
         content = response.text
         # Parse version (simplified, adjust with regex if needed)
@@ -78,29 +82,54 @@ class ShadowUpdate(loader.Module):
         await utils.answer(message, self.strings["update_loading"])
         module_dir = "."  # Используем текущую директорию
         try:
-            for url in self.module_urls:
+            module_urls = [
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_update.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Bonus.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Garden.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Greenhouse.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Guild.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Mine.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_People.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Petrol.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Wasteland.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_Guild.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_People.py",
+                "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_Profile.py",
+            ]
+            for url in module_urls:
                 filename = os.path.join(module_dir, url.split("/")[-1])
                 response = requests.get(url, timeout=10)
                 response.raise_for_status()
                 with open(filename, "wb") as f:
                     f.write(response.content)
 
-            # Reload main module
+            # Перезагрузка модулей
             main_file = os.path.join(module_dir, "Shadow_Ultimat.py")
             self.reload_module("Shadow_Ultimat", main_file)
+            update_file = os.path.join(module_dir, "Shadow_Ultimat_update.py")
+            self.reload_module("ShadowUpdate", update_file)
 
-            # Reload sub-modules
-            sub_modules = [f"Shadow_Ultimat_{part}" for part in [
-                "auto_Bonus", "auto_Garden", "auto_Greenhouse", "auto_Guild",
-                "auto_Mine", "auto_People", "auto_Petrol", "auto_Wasteland",
-                "state_Guild", "state_People", "state_Profile", "update"
-            ]]
+            # Перезагрузка подмодулей
+            sub_modules = [
+                "Shadow_Ultimat_auto_Bonus",
+                "Shadow_Ultimat_auto_Garden",
+                "Shadow_Ultimat_auto_Greenhouse",
+                "Shadow_Ultimat_auto_Guild",
+                "Shadow_Ultimat_auto_Mine",
+                "Shadow_Ultimat_auto_People",
+                "Shadow_Ultimat_auto_Petrol",
+                "Shadow_Ultimat_auto_Wasteland",
+                "Shadow_Ultimat_state_Guild",
+                "Shadow_Ultimat_state_People",
+                "Shadow_Ultimat_state_Profile",
+            ]
             for sub in sub_modules:
                 sub_file = os.path.join(module_dir, f"{sub}.py")
                 if os.path.exists(sub_file):
                     self.reload_module(sub, sub_file)
 
-            # Update version (parse from main module if needed)
+            # Update version
             with open(main_file, "r", encoding="utf-8") as f:
                 content = f.read()
                 latest_version = "7.7.7"  # Extract actual version
@@ -117,5 +146,6 @@ class ShadowUpdate(loader.Module):
     @loader.command(ru_doc="Показать лог последних обновлений")
     async def log(self, message: Message):
         """Show update log"""
-        log = self._db.get("ShadowUpdate", {}).get("update_log", "Нет логов")
+        shadow_update_data = self._db.get("ShadowUpdate", {})
+        log = shadow_update_data.get("update_log", "Нет логов")
         await utils.answer(message, self.strings["log_msg"].format(log))
