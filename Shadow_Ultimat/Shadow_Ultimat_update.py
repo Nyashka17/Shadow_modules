@@ -69,11 +69,13 @@ class Shadow_Ultimat_update(loader.Module):
                 validator=loader.validators.String()
             )
         )
-        self.shadow_ultimat = None  # Экземпляр Shadow_Ultimat будет загружен позже
+        self.shadow_ultimat = None
+        self.client = None  # Store client for passing to Shadow_Ultimat
 
     async def client_ready(self, client, db):
         """Initialize database and load Shadow_Ultimat"""
         self._db = db
+        self.client = client  # Store client
         self.log.debug("Initializing ShadowUpdate module")
         if "ShadowUpdate" not in self._db:
             self._db["ShadowUpdate"] = {}
@@ -104,15 +106,17 @@ class Shadow_Ultimat_update(loader.Module):
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
                 self.log.debug("Executed module from spec")
-                # Инициализируем Shadow_Ultimat
+                # Initialize Shadow_Ultimat with required parameters
                 self.shadow_ultimat = module.Shadow_Ultimat()
-                self.shadow_ultimat._db = self._db  # Передаем базу данных
-                self.shadow_ultimat.config = self.shadow_ultimat.config  # Используем конфиг из Shadow_Ultimat
+                self.shadow_ultimat._db = self._db
+                self.shadow_ultimat.client = self.client
+                self.shadow_ultimat.config = self.shadow_ultimat.config
                 self.log.info("Successfully initialized Shadow_Ultimat module")
         except Exception as e:
             self.shadow_ultimat = None
             self.log.error(f"Failed to load Shadow_Ultimat: {e}")
-            await utils.answer(self._last_message, self.strings["load_error"].format(str(e)) if hasattr(self, '_last_message') else "Ошибка загрузки модуля")
+            # Remove reference to _last_message
+            self.log.error(f"Error loading Shadow_Ultimat: {str(e)}")
 
     def reload_module(self, module_name, file_path):
         """Перезагрузка модуля из файла"""
@@ -218,7 +222,6 @@ class Shadow_Ultimat_update(loader.Module):
             self.log.error(f"Unexpected error during update: {str(e)}")
             await utils.answer(message, self.strings["update_error"].format(str(e)))
 
-    # Перенесенные команды из Shadow_Ultimat.py
     @loader.command(ru_doc="Показать статус авто-фермы для @bfgbunker_bot")
     async def sh(self, message: Message):
         """Show auto-farm status for @bfgbunker_bot"""
