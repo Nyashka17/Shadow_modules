@@ -1,6 +1,31 @@
+# ---------------------------------------------------------------------------------
+#  /\_/\  🌐 This module was loaded through https://t.me/hikkamods_bot
+# ( o.o )  🔐 Licensed under the GNU AGPLv3.
+#  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
+# ---------------------------------------------------------------------------------
+# Name: Shadow_Ultimat
+# Author: @familiarrrrrr
+# Commands:
+# .sh
+# .люди
+# .бонус
+# .бензин
+# .теплица
+# .пустошь
+# .сад
+# .шахта
+# .гильдия
+# .pref
+# ---------------------------------------------------------------------------------
+
+# meta pic: https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/icon.png
+# meta banner: https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/banner.jpg
+# meta developer: @familiarrrrrr
+# scope: hikka_only
+# scope: hikka_min 1.3.0
+
 from herokutl.types import Message
-import loader  # Абсолютный импорт вместо ..
-import utils   # Абсолютный импорт вместо ..
+from .. import loader, utils
 
 @loader.tds
 class Shadow_Ultimat(loader.Module):
