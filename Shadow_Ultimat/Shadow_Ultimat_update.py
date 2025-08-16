@@ -45,8 +45,8 @@ class ShadowUpdate(loader.Module):
     async def client_ready(self, client, db):
         """Initialize database when client is ready"""
         self._db = db
-        if not self._db.get("update_log", None):
-            self._db.set("update_log", "Изначальная установка: 7.7.7")
+        if "ShadowUpdate" not in self._db or "update_log" not in self._db["ShadowUpdate"]:
+            self._db.setdefault("ShadowUpdate", {})["update_log"] = "Изначальная установка: 7.7.7"
 
     def reload_module(self, module_name, file_path):
         spec = importlib.util.spec_from_file_location(module_name, file_path)
@@ -103,7 +103,7 @@ class ShadowUpdate(loader.Module):
                 content = f.read()
                 latest_version = "7.7.7"  # Extract actual version
             self.config["current_version"] = latest_version
-            self._db.set("update_log", f"Обновлено до {latest_version} в {utils.get_current_time()}")
+            self._db.setdefault("ShadowUpdate", {})["update_log"] = f"Обновлено до {latest_version} в {utils.get_current_time()}"
 
             await utils.answer(message, self.strings["update_success"].format(latest_version))
 
@@ -115,5 +115,5 @@ class ShadowUpdate(loader.Module):
     @loader.command(ru_doc="Показать лог последних обновлений")
     async def log(self, message: Message):
         """Show update log"""
-        log = self._db.get("update_log", "Нет логов")
+        log = self._db.get("ShadowUpdate", {}).get("update_log", "Нет логов")
         await utils.answer(message, self.strings["log_msg"].format(log))
