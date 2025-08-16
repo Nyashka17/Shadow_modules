@@ -1,9 +1,5 @@
 from herokutl.types import Message
 from .. import loader, utils
-import requests
-import importlib.util
-import os
-import sys
 
 @loader.tds
 class Shadow_Ultimat(loader.Module):
@@ -25,11 +21,6 @@ class Shadow_Ultimat(loader.Module):
         "sh_commands": "║👁‍🗨 Команды:\n",
         "sh_cmd_template": "╠═╣<code>{}{}</code> - вкл/выкл\n",
         "sh_footer": "╚═══════════════════",
-        "shupdate_desc": "Обновить модули до последней версии",
-        "up_to_date": "У вас текущая версия! Обновлений нет.",
-        "new_version": "Новая версия доступна! Установите обновление: https://github.com/Nyashka17/Shadow_modules",
-        "update_success": "Модули успешно обновлены до версии 7.7.7. Новое: [укажите изменения], Убрано: [укажите удалённое].",
-        "update_loading": "Загружаю подмодули с GitHub...",
         "pref_desc": "Установить новый префикс",
         "pref_updated": "💻 Ваш префикс был обновлен в подсказках на {}"
     }
@@ -75,62 +66,40 @@ class Shadow_Ultimat(loader.Module):
     async def люди(self, message: Message):
         """Toggle people auto-farm for @bfgbunker_bot"""
         self._toggle_status("people", message)
-    # ... (other toggle commands remain the same, e.g., бонус, бензин, etc.)
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для бонусов в @bfgbunker_bot")
+    async def бонус(self, message: Message):
+        """Toggle bonus auto-farm for @bfgbunker_bot"""
+        self._toggle_status("bonus", message)
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для бензина в @bfgbunker_bot")
+    async def бензин(self, message: Message):
+        """Toggle petrol auto-farm for @bfgbunker_bot"""
+        self._toggle_status("petrol", message)
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для теплицы в @bfgbunker_bot")
+    async def теплица(self, message: Message):
+        """Toggle greenhouse auto-farm for @bfgbunker_bot"""
+        self._toggle_status("greenhouse", message)
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для пустоши в @bfgbunker_bot")
+    async def пустошь(self, message: Message):
+        """Toggle wasteland auto-farm for @bfgbunker_bot"""
+        self._toggle_status("wasteland", message)
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для сада в @bfgbunker_bot")
+    async def сад(self, message: Message):
+        """Toggle garden auto-farm for @bfgbunker_bot"""
+        self._toggle_status("garden", message)
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для шахты в @bfgbunker_bot")
+    async def шахта(self, message: Message):
+        """Toggle mine auto-farm for @bfgbunker_bot"""
+        self._toggle_status("mine", message)
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для гильдии в @bfgbunker_bot")
+    async def гильдия(self, message: Message):
+        """Toggle guild auto-farm for @bfgbunker_bot"""
+        self._toggle_status("guild", message)
 
     def _toggle_status(self, key, message):
         statuses = self._db.get("statuses", self.statuses)
         statuses[key] = not statuses[key]
         self._db.set("statuses", statuses)
         await utils.answer(message, f"Авто-ферма для {key} в @bfgbunker_bot теперь {'включена ✅' if statuses[key] else 'выключена ⛔️'}")
-
-    @loader.command(ru_doc="Обновить модули до последней версии")
-    async def shupdate(self, message: Message):
-        """Update all modules to the latest version for @bfgbunker_bot"""
-        await utils.answer(message, self.strings["update_loading"])
-        current_version = self.config["version"]
-        module_urls = [
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Bonus.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Garden.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Greenhouse.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Guild.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Mine.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_People.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Petrol.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_auto_Wasteland.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_Guild.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_People.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_Profile.py",
-            "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_update.py"
-        ]
-
-        module_dir = os.path.dirname(__file__) or "."
-        for url in module_urls:
-            filename = os.path.join(module_dir, url.split("/")[-1])
-            response = requests.get(url)
-            with open(filename, "wb") as f:
-                f.write(response.content)
-
-        def reload_module(module_name, file_path):
-            spec = importlib.util.spec_from_file_location(module_name, file_path)
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[module_name] = module
-            spec.loader.exec_module(module)
-            return module
-
-        reload_module("Shadow_Ultimat", os.path.join(module_dir, "Shadow_Ultimat.py"))
-        sub_modules = [f"Shadow_Ultimat_{part}" for part in [
-            "auto_Bonus", "auto_Garden", "auto_Greenhouse", "auto_Guild",
-            "auto_Mine", "auto_People", "auto_Petrol", "auto_Wasteland",
-            "state_Guild", "state_People", "state_Profile", "update"
-        ]]
-        for sub in sub_modules:
-            sub_file = os.path.join(module_dir, f"{sub}.py")
-            if os.path.exists(sub_file):
-                reload_module(sub, sub_file)
-
-        self.config["version"] = "7.7.7"  # Update with actual version if parsed
-        await utils.answer(message, self.strings["update_success"])
 
     @loader.command(ru_doc="Установить новый префикс")
     async def pref(self, message: Message):
@@ -142,6 +111,3 @@ class Shadow_Ultimat(loader.Module):
         new_prefix = args[0]
         self._db.set("prefix", new_prefix)
         await utils.answer(message, self.strings["pref_updated"].format(new_prefix))
-
-    def get_prefix(self):
-        return self._db.get("prefix", ".")
