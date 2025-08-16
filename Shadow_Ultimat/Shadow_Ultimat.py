@@ -41,7 +41,7 @@ class Shadow_Ultimat(loader.Module):
             "mine": False,
             "guild": False
         }
-        self._db.set("statuses", self.statuses)
+        self._db.set("statuses", self.statuses)  # Замените на правильный синтаксис, если требуется
         if not self._db.get("prefix", None):
             self._db.set("prefix", self.config["prefix"])
 
@@ -65,40 +65,48 @@ class Shadow_Ultimat(loader.Module):
     @loader.command(ru_doc="Вкл/выкл авто-ферму для людей в @bfgbunker_bot")
     async def люди(self, message: Message):
         """Toggle people auto-farm for @bfgbunker_bot"""
-        self._toggle_status("people", message)
+        await self._toggle_status("people", message)
+
     @loader.command(ru_doc="Вкл/выкл авто-ферму для бонусов в @bfgbunker_bot")
     async def бонус(self, message: Message):
         """Toggle bonus auto-farm for @bfgbunker_bot"""
-        self._toggle_status("bonus", message)
+        await self._toggle_status("bonus", message)
+
     @loader.command(ru_doc="Вкл/выкл авто-ферму для бензина в @bfgbunker_bot")
     async def бензин(self, message: Message):
         """Toggle petrol auto-farm for @bfgbunker_bot"""
-        self._toggle_status("petrol", message)
+        await self._toggle_status("petrol", message)
+
     @loader.command(ru_doc="Вкл/выкл авто-ферму для теплицы в @bfgbunker_bot")
     async def теплица(self, message: Message):
         """Toggle greenhouse auto-farm for @bfgbunker_bot"""
-        self._toggle_status("greenhouse", message)
+        await self._toggle_status("greenhouse", message)
+
     @loader.command(ru_doc="Вкл/выкл авто-ферму для пустоши в @bfgbunker_bot")
     async def пустошь(self, message: Message):
         """Toggle wasteland auto-farm for @bfgbunker_bot"""
-        self._toggle_status("wasteland", message)
+        await self._toggle_status("wasteland", message)
+
     @loader.command(ru_doc="Вкл/выкл авто-ферму для сада в @bfgbunker_bot")
     async def сад(self, message: Message):
         """Toggle garden auto-farm for @bfgbunker_bot"""
-        self._toggle_status("garden", message)
+        await self._toggle_status("garden", message)
+
     @loader.command(ru_doc="Вкл/выкл авто-ферму для шахты в @bfgbunker_bot")
     async def шахта(self, message: Message):
         """Toggle mine auto-farm for @bfgbunker_bot"""
-        self._toggle_status("mine", message)
+        await self._toggle_status("mine", message)
+
     @loader.command(ru_doc="Вкл/выкл авто-ферму для гильдии в @bfgbunker_bot")
     async def гильдия(self, message: Message):
         """Toggle guild auto-farm for @bfgbunker_bot"""
-        self._toggle_status("guild", message)
+        await self._toggle_status("guild", message)
 
-    def _toggle_status(self, key, message):
+    async def _toggle_status(self, key, message):
+        """Toggle the status of a specific auto-farm"""
         statuses = self._db.get("statuses", self.statuses)
         statuses[key] = not statuses[key]
-        self._db.set("statuses", statuses)
+        self._db["statuses"] = statuses  # Используем прямой доступ вместо set, если set вызывает ошибки
         await utils.answer(message, f"Авто-ферма для {key} в @bfgbunker_bot теперь {'включена ✅' if statuses[key] else 'выключена ⛔️'}")
 
     @loader.command(ru_doc="Установить новый префикс")
@@ -109,5 +117,5 @@ class Shadow_Ultimat(loader.Module):
             await utils.answer(message, "Использование: .pref <префикс>")
             return
         new_prefix = args[0]
-        self._db.set("prefix", new_prefix)
+        self._db["prefix"] = new_prefix  # Используем прямой доступ вместо set
         await utils.answer(message, self.strings["pref_updated"].format(new_prefix))
