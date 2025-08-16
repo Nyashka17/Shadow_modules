@@ -129,7 +129,7 @@ class Shadow_Ultimat(loader.Module):
         """Toggle guild auto-farm for @bfgbunker_bot"""
         await self._toggle_status("guild", message)
 
-    async def _toggle_status(self, key, message):
+    async def _toggle_status(self, key, message: Message):
         """Toggle the status of a specific auto-farm"""
         statuses = self._db.get("statuses", self.statuses)
         statuses[key] = not statuses[key]
