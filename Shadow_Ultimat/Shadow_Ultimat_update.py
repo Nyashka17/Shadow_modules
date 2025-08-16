@@ -22,6 +22,7 @@ import requests
 import importlib.util
 import asyncio
 import pathlib
+import logging
 from herokutl.types import Message
 from .. import loader, utils
 
@@ -39,6 +40,9 @@ class ShadowUpdate(loader.Module):
         "update_error": "Ошибка при обновлении: {}"
     }
     strings_ru = strings
+
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)  # Явное определение logger
 
     async def client_ready(self, client, db):
         """Initialize database and load Shadow_Ultimat"""
