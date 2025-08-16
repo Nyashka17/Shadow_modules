@@ -61,7 +61,7 @@ class ShadowUpdate(loader.Module):
     async def check(self, message: Message):
         """Check for available updates"""
         current_version = self.config["current_version"]
-        module_dir = "."  # Используем текущую директорию вместо __file__
+        module_dir = "."  # Используем текущую директорию
         main_url = self.module_urls[0]  # URL for Shadow_Ultimat.py
         response = requests.get(main_url)
         content = response.text
@@ -76,7 +76,7 @@ class ShadowUpdate(loader.Module):
     async def shupdate(self, message: Message):
         """Update all modules to the latest version"""
         await utils.answer(message, self.strings["update_loading"])
-        module_dir = "."  # Используем текущую директорию вместо __file__
+        module_dir = "."  # Используем текущую директорию
         try:
             for url in self.module_urls:
                 filename = os.path.join(module_dir, url.split("/")[-1])
@@ -117,5 +117,5 @@ class ShadowUpdate(loader.Module):
     @loader.command(ru_doc="Показать лог последних обновлений")
     async def log(self, message: Message):
         """Show update log"""
-        log = self._db.get("ShadowUpdate", {"update_log": "Нет логов"})["update_log"]
+        log = self._db.get("ShadowUpdate", {}).get("update_log", "Нет логов")
         await utils.answer(message, self.strings["log_msg"].format(log))
