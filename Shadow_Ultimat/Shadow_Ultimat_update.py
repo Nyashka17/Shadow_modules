@@ -37,7 +37,7 @@ class ShadowUpdate(loader.Module):
         "up_to_date": "У вас текущая версия! Обновлений нет.",
         "new_version": "Новая версия доступна! Используйте .shupdate для обновления.",
         "update_loading": "Загружаю обновления с GitHub...",
-        "update_success": "Модули успешно обновлены до версии {}. Новое: [укажите изменения], Убрано: [укажите удалённое].",
+        "update_success": "👻 Модули успешно обновлены до версии 7.7.8\n———————————————————————————\n🎡 Новое: Обновлённый дизайн для модуля Shadow_Ultimat_update.py\n🎢 Убрано: Старый дизайн больше не используется для модуля Shadow_Ultimat_update.py",
         "update_error": "Ошибка при обновлении: {}",
         "load_error": "Ошибка при загрузке Shadow_Ultimat: {}"
     }
@@ -70,7 +70,7 @@ class ShadowUpdate(loader.Module):
             self._db["ShadowUpdate"] = {}
             self.log.info("Initialized new ShadowUpdate database entry")
         if "update_log" not in self._db["ShadowUpdate"]:
-            self._db["ShadowUpdate"]["update_log"] = "Изначальная установка: 7.7.7"
+            self._db["ShadowUpdate"]["update_log"] = "Изначальная установка: 7.7.8"
             self.log.info("Set initial update log")
 
         self.core_file = os.path.join(pathlib.Path.home(), ".heroku", "Shadow_Ultimat.py")
@@ -124,7 +124,7 @@ class ShadowUpdate(loader.Module):
         response = requests.get(main_url)
         content = response.text
         # Parse version (simplified, adjust with regex if needed)
-        latest_version = "7.7.7"  # Replace with actual version extraction logic
+        latest_version = "7.7.8"  # Обновлена версия
         if current_version == latest_version:
             await utils.answer(message, self.strings["up_to_date"])
         else:
@@ -191,12 +191,12 @@ class ShadowUpdate(loader.Module):
             # Update version
             with open(main_file, "r", encoding="utf-8") as f:
                 content = f.read()
-                latest_version = "7.7.7"  # Extract actual version
+                latest_version = "7.7.8"  # Обновлена версия
             self.config["current_version"] = latest_version
             self._db["ShadowUpdate"]["update_log"] = f"Обновлено до {latest_version} в {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             self.log.info(f"Updated to version {latest_version}")
 
-            await utils.answer(message, self.strings["update_success"].format(latest_version))
+            await utils.answer(message, self.strings["update_success"])
 
         except requests.RequestException as e:
             self.log.error(f"Request error during update: {str(e)}")
