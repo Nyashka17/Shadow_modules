@@ -43,9 +43,9 @@ class ShadowUpdate(loader.Module):
     strings_ru = strings
 
     def __init__(self):
-        # Инициализация логгера, если фреймворк не предоставляет self.log
+        # Инициализация логгера
         self.log = logging.getLogger(__name__)
-        self.log.setLevel(logging.DEBUG)  # Установим уровень логирования
+        self.log.setLevel(logging.DEBUG)
         if not self.log.handlers:
             handler = logging.StreamHandler()  # Вывод в консоль
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -56,6 +56,15 @@ class ShadowUpdate(loader.Module):
         """Initialize database and load Shadow_Ultimat"""
         self._db = db
         self.log.debug("Initializing ShadowUpdate module")
+        # Инициализация config
+        self.config = loader.ModuleConfig(
+            loader.ConfigValue(
+                "current_version",
+                "0.0.0",  # Начальная версия, будет обновляться
+                "Current version of the module",
+                validator=loader.validators.String()
+            )
+        )
         if "ShadowUpdate" not in self._db:
             self._db["ShadowUpdate"] = {}
             self.log.info("Initialized new ShadowUpdate database entry")
