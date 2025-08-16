@@ -5,17 +5,7 @@
 # ---------------------------------------------------------------------------------
 # Name: Shadow_Ultimat
 # Author: @familiarrrrrr
-# Commands:
-# .sh
-# .люди
-# .бонус
-# .бензин
-# .теплица
-# .пустошь
-# .сад
-# .шахта
-# .гильдия
-# .pref
+# Commands: None
 # ---------------------------------------------------------------------------------
 
 # meta pic: https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/icon.png
@@ -25,14 +15,14 @@
 # scope: hikka_min 1.3.0
 
 from herokutl.types import Message
-from heroku import loader, utils  # Абсолютный импорт
+from heroku import loader, utils
 
 @loader.tds
 class Shadow_Ultimat(loader.Module):
     """Shadow Ultimat Auto Farm Manager for @bfgbunker_bot"""
     strings = {
         "name": "Shadow_Ultimat",
-        "version": "7.7.8",  # Обновлена версия
+        "version": "7.7.8",
         "author": "@familiarrrrrr",
         "sh_desc": "Показать статус авто-фермы для @bfgbunker_bot",
         "sh_status": "📓 | Shadow_Ultimat | ~ [ v{} ]\n╔═╣════════════════╗\n║  🔻СТАТУС |💣| BFGB🔻\n╠══════════════════╣\n",
@@ -54,7 +44,7 @@ class Shadow_Ultimat(loader.Module):
 
     def __init__(self):
         self.config = loader.ModuleConfig(
-            loader.ConfigValue("version", "7.7.8", "Current module version", validator=loader.validators.String()),  # Обновлена версия
+            loader.ConfigValue("version", "7.7.8", "Current module version", validator=loader.validators.String()),
             loader.ConfigValue("prefix", ".", "Current command prefix", validator=loader.validators.String()),
         )
         self.statuses = {
@@ -75,7 +65,6 @@ class Shadow_Ultimat(loader.Module):
     def get_prefix(self):
         return self._db.get("prefix", ".")
 
-    @loader.command(ru_doc="Показать статус авто-фермы для @bfgbunker_bot")
     async def sh(self, message: Message):
         """Show auto-farm status for @bfgbunker_bot"""
         statuses = self._db.get("statuses", self.statuses)
@@ -89,42 +78,34 @@ class Shadow_Ultimat(loader.Module):
         status_msg += self.strings["sh_footer"]
         await utils.answer(message, status_msg)
 
-    @loader.command(ru_doc="Вкл/выкл авто-ферму для людей в @bfgbunker_bot")
     async def люди(self, message: Message):
         """Toggle people auto-farm for @bfgbunker_bot"""
         await self._toggle_status("people", message)
 
-    @loader.command(ru_doc="Вкл/выкл авто-ферму для бонусов в @bfgbunker_bot")
     async def бонус(self, message: Message):
         """Toggle bonus auto-farm for @bfgbunker_bot"""
         await self._toggle_status("bonus", message)
 
-    @loader.command(ru_doc="Вкл/выкл авто-ферму для бензина в @bfgbunker_bot")
     async def бензин(self, message: Message):
         """Toggle petrol auto-farm for @bfgbunker_bot"""
         await self._toggle_status("petrol", message)
 
-    @loader.command(ru_doc="Вкл/выкл авто-ферму для теплицы в @bfgbunker_bot")
     async def теплица(self, message: Message):
         """Toggle greenhouse auto-farm for @bfgbunker_bot"""
         await self._toggle_status("greenhouse", message)
 
-    @loader.command(ru_doc="Вкл/выкл авто-ферму для пустоши в @bfgbunker_bot")
     async def пустошь(self, message: Message):
         """Toggle wasteland auto-farm for @bfgbunker_bot"""
         await self._toggle_status("wasteland", message)
 
-    @loader.command(ru_doc="Вкл/выкл авто-ферму для сада в @bfgbunker_bot")
     async def сад(self, message: Message):
         """Toggle garden auto-farm for @bfgbunker_bot"""
         await self._toggle_status("garden", message)
 
-    @loader.command(ru_doc="Вкл/выкл авто-ферму для шахты в @bfgbunker_bot")
     async def шахта(self, message: Message):
         """Toggle mine auto-farm for @bfgbunker_bot"""
         await self._toggle_status("mine", message)
 
-    @loader.command(ru_doc="Вкл/выкл авто-ферму для гильдии в @bfgbunker_bot")
     async def гильдия(self, message: Message):
         """Toggle guild auto-farm for @bfgbunker_bot"""
         await self._toggle_status("guild", message)
@@ -136,7 +117,6 @@ class Shadow_Ultimat(loader.Module):
         self._db["statuses"] = statuses
         await utils.answer(message, f"Авто-ферма для {key} в @bfgbunker_bot теперь {'включена ✅' if statuses[key] else 'выключена ⛔️'}")
 
-    @loader.command(ru_doc="Установить новый префикс")
     async def pref(self, message: Message):
         """Set a new command prefix"""
         args = utils.get_args(message)
