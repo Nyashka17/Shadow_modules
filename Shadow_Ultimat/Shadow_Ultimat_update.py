@@ -23,8 +23,9 @@ import importlib.util
 import asyncio
 import pathlib
 import logging
+from datetime import datetime
 from herokutl.types import Message
-from heroku import loader, utils  # Абсолютный импорт вместо относительного
+from heroku import loader, utils
 
 @loader.tds
 class ShadowUpdate(loader.Module):
@@ -192,7 +193,7 @@ class ShadowUpdate(loader.Module):
                 content = f.read()
                 latest_version = "7.7.7"  # Extract actual version
             self.config["current_version"] = latest_version
-            self._db["ShadowUpdate"]["update_log"] = f"Обновлено до {latest_version} в {utils.get_current_time()}"
+            self._db["ShadowUpdate"]["update_log"] = f"Обновлено до {latest_version} в {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             self.log.info(f"Updated to version {latest_version}")
 
             await utils.answer(message, self.strings["update_success"].format(latest_version))
