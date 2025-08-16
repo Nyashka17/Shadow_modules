@@ -1,5 +1,6 @@
 from herokutl.types import Message
-from .. import loader, utils
+import loader  # Абсолютный импорт вместо ..
+import utils   # Абсолютный импорт вместо ..
 
 @loader.tds
 class Shadow_Ultimat(loader.Module):
@@ -41,7 +42,6 @@ class Shadow_Ultimat(loader.Module):
             "mine": False,
             "guild": False
         }
-        # Инициализация базы данных без await
         if "statuses" not in self._db:
             self._db["statuses"] = self.statuses
         if "prefix" not in self._db:
