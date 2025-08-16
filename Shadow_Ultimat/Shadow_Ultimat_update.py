@@ -37,7 +37,7 @@ class ShadowUpdate(loader.Module):
         "up_to_date": "У вас текущая версия! Обновлений нет.",
         "new_version": "Новая версия доступна! Используйте .shupdate для обновления.",
         "update_loading": "Загружаю обновления с GitHub...",
-        "update_success": "👻 Модули успешно обновлены до версии 7.7.8\n———————————————————————————\n🎡 Новое: Обновлённый дизайн для модуля Shadow_Ultimat_update.py\n🎢 Убрано: Старый дизайн больше не используется для модуля Shadow_Ultimat_update.py",
+        "update_success": "👻 Модули успешно обновлены до версии 7.7.8\n———————————————————————————\n🎡 Новое: Обновлённый дизайн для модуля обновлений,\n🎢 Убрано: Старый дизайн больше не используется для модуля Shadow_Ultimat_update.py.",
         "update_error": "Ошибка при обновлении: {}",
         "load_error": "Ошибка при загрузке Shadow_Ultimat: {}"
     }
@@ -73,7 +73,7 @@ class ShadowUpdate(loader.Module):
             self._db["ShadowUpdate"]["update_log"] = "Изначальная установка: 7.7.8"
             self.log.info("Set initial update log")
 
-        self.core_file = os.path.join(pathlib.Path.home(), ".heroku", "Shadow_Ultimat.py")
+        self.core_file = os.path.join(pathlib.Path.home(), "Heroku", "loaded_modules", "Shadow_Ultimat.py")
         os.makedirs(os.path.dirname(self.core_file), exist_ok=True)
         self._lock = asyncio.Lock()
         self.log.debug(f"Core file path: {self.core_file}")
@@ -119,7 +119,7 @@ class ShadowUpdate(loader.Module):
         """Check for available updates"""
         self.log.debug("Checking for updates")
         current_version = self.config["current_version"]
-        module_dir = os.path.join(pathlib.Path.home(), ".heroku")
+        module_dir = os.path.join(pathlib.Path.home(), "Heroku", "loaded_modules")
         main_url = "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat.py"
         response = requests.get(main_url)
         content = response.text
@@ -136,7 +136,7 @@ class ShadowUpdate(loader.Module):
         """Update all modules to the latest version"""
         self.log.debug("Starting update process")
         await utils.answer(message, self.strings["update_loading"])
-        module_dir = os.path.join(pathlib.Path.home(), ".heroku")
+        module_dir = os.path.join(pathlib.Path.home(), "Heroku", "loaded_modules")
         os.makedirs(module_dir, exist_ok=True)
         try:
             module_urls = [
