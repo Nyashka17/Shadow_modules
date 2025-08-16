@@ -70,12 +70,12 @@ class Shadow_Ultimat_update(loader.Module):
             )
         )
         self.shadow_ultimat = None
-        self.client = None  # Store client for passing to Shadow_Ultimat
+        self.client = None
 
     async def client_ready(self, client, db):
         """Initialize database and load Shadow_Ultimat"""
         self._db = db
-        self.client = client  # Store client
+        self.client = client
         self.log.debug("Initializing ShadowUpdate module")
         if "ShadowUpdate" not in self._db:
             self._db["ShadowUpdate"] = {}
@@ -115,7 +115,7 @@ class Shadow_Ultimat_update(loader.Module):
         except Exception as e:
             self.shadow_ultimat = None
             self.log.error(f"Failed to load Shadow_Ultimat: {e}")
-            # Remove reference to _last_message
+            # Log error instead of using _last_message
             self.log.error(f"Error loading Shadow_Ultimat: {str(e)}")
 
     def reload_module(self, module_name, file_path):
