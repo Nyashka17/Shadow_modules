@@ -41,9 +41,11 @@ class Shadow_Ultimat(loader.Module):
             "mine": False,
             "guild": False
         }
-        self._db.set("statuses", self.statuses)  # Замените на правильный синтаксис, если требуется
-        if not self._db.get("prefix", None):
-            self._db.set("prefix", self.config["prefix"])
+        # Инициализация базы данных без await
+        if "statuses" not in self._db:
+            self._db["statuses"] = self.statuses
+        if "prefix" not in self._db:
+            self._db["prefix"] = self.config["prefix"]
 
     def get_prefix(self):
         return self._db.get("prefix", ".")
@@ -106,7 +108,7 @@ class Shadow_Ultimat(loader.Module):
         """Toggle the status of a specific auto-farm"""
         statuses = self._db.get("statuses", self.statuses)
         statuses[key] = not statuses[key]
-        self._db["statuses"] = statuses  # Используем прямой доступ вместо set, если set вызывает ошибки
+        self._db["statuses"] = statuses
         await utils.answer(message, f"Авто-ферма для {key} в @bfgbunker_bot теперь {'включена ✅' if statuses[key] else 'выключена ⛔️'}")
 
     @loader.command(ru_doc="Установить новый префикс")
@@ -117,5 +119,5 @@ class Shadow_Ultimat(loader.Module):
             await utils.answer(message, "Использование: .pref <префикс>")
             return
         new_prefix = args[0]
-        self._db["prefix"] = new_prefix  # Используем прямой доступ вместо set
+        self._db["prefix"] = new_prefix
         await utils.answer(message, self.strings["pref_updated"].format(new_prefix))
