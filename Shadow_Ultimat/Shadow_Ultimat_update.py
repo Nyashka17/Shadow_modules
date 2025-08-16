@@ -138,6 +138,7 @@ class ShadowUpdate(loader.Module):
         await utils.answer(message, self.strings["update_loading"])
         module_dir = os.path.join(pathlib.Path.home(), "Heroku", "loaded_modules")
         os.makedirs(module_dir, exist_ok=True)
+        user_id = str(message.from_user.id)  # Получаем ID пользователя
         try:
             module_urls = [
                 "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat.py",
@@ -155,7 +156,9 @@ class ShadowUpdate(loader.Module):
                 "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_Profile.py",
             ]
             for url in module_urls:
-                filename = os.path.join(module_dir, url.split("/")[-1])
+                base_filename = url.split("/")[-1]
+                filename_without_ext = os.path.splitext(base_filename)[0]
+                filename = os.path.join(module_dir, f"{filename_without_ext}_{user_id}.py")
                 self.log.debug(f"Downloading {url} to {filename}")
                 response = requests.get(url, timeout=10)
                 response.raise_for_status()
@@ -163,10 +166,10 @@ class ShadowUpdate(loader.Module):
                     f.write(response.text)
                 self.log.info(f"Successfully downloaded {filename}")
 
-            # Перезагрузка модулей
-            main_file = os.path.join(module_dir, "Shadow_Ultimat.py")
+            # Перезагрузка модулей с учётом ID в имени
+            main_file = os.path.join(module_dir, f"Shadow_Ultimat_{user_id}.py")
             self.reload_module("Shadow_Ultimat", main_file)
-            update_file = os.path.join(module_dir, "Shadow_Ultimat_update.py")
+            update_file = os.path.join(module_dir, f"Shadow_Ultimat_update_{user_id}.py")
             self.reload_module("ShadowUpdate", update_file)
 
             # Перезагрузка подмодулей
@@ -184,7 +187,7 @@ class ShadowUpdate(loader.Module):
                 "Shadow_Ultimat_state_Profile",
             ]
             for sub in sub_modules:
-                sub_file = os.path.join(module_dir, f"{sub}.py")
+                sub_file = os.path.join(module_dir, f"{sub}_{user_id}.py")
                 if os.path.exists(sub_file):
                     self.reload_module(sub, sub_file)
 
