@@ -1,5 +1,5 @@
 from herokutl.types import Message
-from .. import loader, utils
+from .. import loader, utils  # Оставляем как есть, но проверим позже
 import requests
 import importlib.util
 import os
