@@ -117,5 +117,5 @@ class ShadowUpdate(loader.Module):
     @loader.command(ru_doc="Показать лог последних обновлений")
     async def log(self, message: Message):
         """Show update log"""
-        log = self._db.get("ShadowUpdate", {}).get("update_log", "Нет логов")
+        log = self._db.get("ShadowUpdate", {"update_log": "Нет логов"})["update_log"]
         await utils.answer(message, self.strings["log_msg"].format(log))
