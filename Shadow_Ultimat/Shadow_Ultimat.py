@@ -32,7 +32,7 @@ class Shadow_Ultimat(loader.Module):
     """Shadow Ultimat Auto Farm Manager for @bfgbunker_bot"""
     strings = {
         "name": "Shadow_Ultimat",
-        "version": "7.7.7",
+        "version": "7.7.8",  # Обновлена версия
         "author": "@familiarrrrrr",
         "sh_desc": "Показать статус авто-фермы для @bfgbunker_bot",
         "sh_status": "📓 | Shadow_Ultimat | ~ [ v{} ]\n╔═╣════════════════╗\n║  🔻СТАТУС |💣| BFGB🔻\n╠══════════════════╣\n",
@@ -54,7 +54,7 @@ class Shadow_Ultimat(loader.Module):
 
     def __init__(self):
         self.config = loader.ModuleConfig(
-            loader.ConfigValue("version", "7.7.7", "Current module version", validator=loader.validators.String()),
+            loader.ConfigValue("version", "7.7.8", "Current module version", validator=loader.validators.String()),  # Обновлена версия
             loader.ConfigValue("prefix", ".", "Current command prefix", validator=loader.validators.String()),
         )
         self.statuses = {
