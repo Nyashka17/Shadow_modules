@@ -11,9 +11,9 @@ class ShadowUpdate(loader.Module):
     strings = {
         "name": "ShadowUpdate",
         "check_desc": "Проверить наличие обновлений",
-        "update_desc": "Обновить модули до последней версии",
+        "shupdate_desc": "Обновить модули до последней версии",  # Изменено с "update_desc"
         "up_to_date": "У вас текущая версия! Обновлений нет.",
-        "new_version": "Новая версия доступна! Используйте .update для обновления.",
+        "new_version": "Новая версия доступна! Используйте .shupdate для обновления.",  # Изменено с ".update"
         "update_loading": "Загружаю обновления с GitHub...",
         "update_success": "Модули успешно обновлены до версии {}. Новое: [укажите изменения], Убрано: [укажите удалённое].",
         "update_error": "Ошибка при обновлении: {}",
@@ -65,8 +65,8 @@ class ShadowUpdate(loader.Module):
         else:
             await utils.answer(message, self.strings["new_version"])
 
-    @loader.command(ru_doc="Обновить модули до последней версии")
-    async def update(self, message: Message):
+    @loader.command(ru_doc="Обновить модули до последней версии")  # Изменено с @loader.command(ru_doc="update_desc")
+    async def shupdate(self, message: Message):  # Изменено с async def update
         """Update all modules to the latest version"""
         await utils.answer(message, self.strings["update_loading"])
         module_dir = os.path.dirname(__file__) or "."
