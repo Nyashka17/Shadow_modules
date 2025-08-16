@@ -11,9 +11,9 @@ class ShadowUpdate(loader.Module):
     strings = {
         "name": "ShadowUpdate",
         "check_desc": "Проверить наличие обновлений",
-        "shupdate_desc": "Обновить модули до последней версии",  # Изменено с "update_desc"
+        "shupdate_desc": "Обновить модули до последней версии",
         "up_to_date": "У вас текущая версия! Обновлений нет.",
-        "new_version": "Новая версия доступна! Используйте .shupdate для обновления.",  # Изменено с ".update"
+        "new_version": "Новая версия доступна! Используйте .shupdate для обновления.",
         "update_loading": "Загружаю обновления с GitHub...",
         "update_success": "Модули успешно обновлены до версии {}. Новое: [укажите изменения], Убрано: [укажите удалённое].",
         "update_error": "Ошибка при обновлении: {}",
@@ -41,7 +41,12 @@ class ShadowUpdate(loader.Module):
             "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_state_Profile.py",
             "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat_update.py"
         ]
-        self._db.set("update_log", "Изначальная установка: 7.7.7")
+
+    async def client_ready(self, client, db):
+        """Initialize database when client is ready"""
+        self._db = db
+        if not self._db.get("update_log", None):
+            self._db.set("update_log", "Изначальная установка: 7.7.7")
 
     def reload_module(self, module_name, file_path):
         spec = importlib.util.spec_from_file_location(module_name, file_path)
@@ -65,8 +70,8 @@ class ShadowUpdate(loader.Module):
         else:
             await utils.answer(message, self.strings["new_version"])
 
-    @loader.command(ru_doc="Обновить модули до последней версии")  # Изменено с @loader.command(ru_doc="update_desc")
-    async def shupdate(self, message: Message):  # Изменено с async def update
+    @loader.command(ru_doc="Обновить модули до последней версии")
+    async def shupdate(self, message: Message):
         """Update all modules to the latest version"""
         await utils.answer(message, self.strings["update_loading"])
         module_dir = os.path.dirname(__file__) or "."
