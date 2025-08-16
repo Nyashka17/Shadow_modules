@@ -138,7 +138,12 @@ class ShadowUpdate(loader.Module):
         await utils.answer(message, self.strings["update_loading"])
         module_dir = os.path.join(pathlib.Path.home(), "Heroku", "loaded_modules")
         os.makedirs(module_dir, exist_ok=True)
-        user_id = str(message.from_user.id)  # Получаем ID пользователя
+        # Получаем ID отправителя
+        user_id = str(getattr(message, "sender_id", None) or getattr(message, "from_id", None))
+        if not user_id:
+            await utils.answer(message, "Ошибка: Не удалось определить ID пользователя.")
+            self.log.error("Failed to determine user ID from message.")
+            return
         try:
             module_urls = [
                 "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat.py",
