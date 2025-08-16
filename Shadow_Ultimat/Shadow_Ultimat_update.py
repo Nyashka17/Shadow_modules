@@ -45,8 +45,10 @@ class ShadowUpdate(loader.Module):
     async def client_ready(self, client, db):
         """Initialize database when client is ready"""
         self._db = db
-        if "ShadowUpdate" not in self._db or "update_log" not in self._db["ShadowUpdate"]:
-            self._db.setdefault("ShadowUpdate", {})["update_log"] = "Изначальная установка: 7.7.7"
+        if "ShadowUpdate" not in self._db:
+            self._db["ShadowUpdate"] = {}
+        if "update_log" not in self._db["ShadowUpdate"]:
+            self._db["ShadowUpdate"]["update_log"] = "Изначальная установка: 7.7.7"
 
     def reload_module(self, module_name, file_path):
         spec = importlib.util.spec_from_file_location(module_name, file_path)
@@ -59,7 +61,7 @@ class ShadowUpdate(loader.Module):
     async def check(self, message: Message):
         """Check for available updates"""
         current_version = self.config["current_version"]
-        module_dir = os.path.dirname(__file__) or "."
+        module_dir = "."  # Используем текущую директорию вместо __file__
         main_url = self.module_urls[0]  # URL for Shadow_Ultimat.py
         response = requests.get(main_url)
         content = response.text
@@ -74,7 +76,7 @@ class ShadowUpdate(loader.Module):
     async def shupdate(self, message: Message):
         """Update all modules to the latest version"""
         await utils.answer(message, self.strings["update_loading"])
-        module_dir = os.path.dirname(__file__) or "."
+        module_dir = "."  # Используем текущую директорию вместо __file__
         try:
             for url in self.module_urls:
                 filename = os.path.join(module_dir, url.split("/")[-1])
@@ -103,7 +105,7 @@ class ShadowUpdate(loader.Module):
                 content = f.read()
                 latest_version = "7.7.7"  # Extract actual version
             self.config["current_version"] = latest_version
-            self._db.setdefault("ShadowUpdate", {})["update_log"] = f"Обновлено до {latest_version} в {utils.get_current_time()}"
+            self._db["ShadowUpdate"]["update_log"] = f"Обновлено до {latest_version} в {utils.get_current_time()}"
 
             await utils.answer(message, self.strings["update_success"].format(latest_version))
 
