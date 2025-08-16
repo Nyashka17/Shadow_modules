@@ -3,11 +3,21 @@
 # ( o.o )  🔐 Licensed under the GNU AGPLv3.
 #  > ^ <   ⚠️ Owner of heta.hikariatama.ru doesn't take any responsibilities or intellectual property rights regarding this script
 # ---------------------------------------------------------------------------------
-# Name: ShadowUpdate
+# Name: Shadow_Ultimat_update
 # Author: @familiarrrrrr
 # Commands:
 # .check
 # .shupdate
+# .sh
+# .люди
+# .бонус
+# .бензин
+# .теплица
+# .пустошь
+# .сад
+# .шахта
+# .гильдия
+# .pref
 # ---------------------------------------------------------------------------------
 
 # meta pic: https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/update_icon.png
@@ -28,10 +38,10 @@ from herokutl.types import Message
 from heroku import loader, utils
 
 @loader.tds
-class ShadowUpdate(loader.Module):
-    """Module for managing updates of Shadow_Ultimat and its sub-modules"""
+class Shadow_Ultimat_update(loader.Module):
+    """Module for managing updates and commands of Shadow_Ultimat and its sub-modules"""
     strings = {
-        "name": "ShadowUpdate",
+        "name": "Shadow_Ultimat_update",
         "check_desc": "Проверить наличие обновлений",
         "shupdate_desc": "Обновить модули до последней версии",
         "up_to_date": "У вас текущая версия! Обновлений нет.",
@@ -44,23 +54,22 @@ class ShadowUpdate(loader.Module):
     strings_ru = strings
 
     def __init__(self):
-        # Инициализация логгера
         self.log = logging.getLogger(__name__)
         self.log.setLevel(logging.DEBUG)
         if not self.log.handlers:
-            handler = logging.StreamHandler()  # Вывод в консоль
+            handler = logging.StreamHandler()
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             self.log.addHandler(handler)
-        # Инициализация config
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
                 "current_version",
-                "0.0.0",  # Начальная версия, будет обновляться
+                "0.0.0",
                 "Current version of the module",
                 validator=loader.validators.String()
             )
         )
+        self.shadow_ultimat = None  # Экземпляр Shadow_Ultimat будет загружен позже
 
     async def client_ready(self, client, db):
         """Initialize database and load Shadow_Ultimat"""
@@ -95,14 +104,15 @@ class ShadowUpdate(loader.Module):
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
                 self.log.debug("Executed module from spec")
-                # Предполагаем, что класс называется Shadow_Ultimat
-                self.shadow_ultimat = module.Shadow_Ultimat(self.bot, self._db, self.config, self.strings)
+                # Инициализируем Shadow_Ultimat
+                self.shadow_ultimat = module.Shadow_Ultimat()
+                self.shadow_ultimat._db = self._db  # Передаем базу данных
+                self.shadow_ultimat.config = self.shadow_ultimat.config  # Используем конфиг из Shadow_Ultimat
                 self.log.info("Successfully initialized Shadow_Ultimat module")
         except Exception as e:
             self.shadow_ultimat = None
             self.log.error(f"Failed to load Shadow_Ultimat: {e}")
-            # Уведомление пользователя (если доступен message)
-            # await utils.answer(self._last_message, self.strings["load_error"].format(str(e)))
+            await utils.answer(self._last_message, self.strings["load_error"].format(str(e)) if hasattr(self, '_last_message') else "Ошибка загрузки модуля")
 
     def reload_module(self, module_name, file_path):
         """Перезагрузка модуля из файла"""
@@ -123,8 +133,7 @@ class ShadowUpdate(loader.Module):
         main_url = "https://raw.githubusercontent.com/Nyashka17/Shadow_modules/refs/heads/main/Shadow_Ultimat/Shadow_Ultimat.py"
         response = requests.get(main_url)
         content = response.text
-        # Parse version (simplified, adjust with regex if needed)
-        latest_version = "7.7.8"  # Обновлена версия
+        latest_version = "7.7.8"
         if current_version == latest_version:
             await utils.answer(message, self.strings["up_to_date"])
         else:
@@ -138,7 +147,6 @@ class ShadowUpdate(loader.Module):
         await utils.answer(message, self.strings["update_loading"])
         module_dir = os.path.join(pathlib.Path.home(), "Heroku", "loaded_modules")
         os.makedirs(module_dir, exist_ok=True)
-        # Получаем ID отправителя
         user_id = str(getattr(message, "sender_id", None) or getattr(message, "from_id", None))
         if not user_id:
             await utils.answer(message, "Ошибка: Не удалось определить ID пользователя.")
@@ -171,13 +179,11 @@ class ShadowUpdate(loader.Module):
                     f.write(response.text)
                 self.log.info(f"Successfully downloaded {filename}")
 
-            # Перезагрузка модулей с учётом ID в имени
             main_file = os.path.join(module_dir, f"Shadow_Ultimat_{user_id}.py")
             self.reload_module("Shadow_Ultimat", main_file)
             update_file = os.path.join(module_dir, f"Shadow_Ultimat_update_{user_id}.py")
             self.reload_module("ShadowUpdate", update_file)
 
-            # Перезагрузка подмодулей
             sub_modules = [
                 "Shadow_Ultimat_auto_Bonus",
                 "Shadow_Ultimat_auto_Garden",
@@ -196,10 +202,9 @@ class ShadowUpdate(loader.Module):
                 if os.path.exists(sub_file):
                     self.reload_module(sub, sub_file)
 
-            # Update version
             with open(main_file, "r", encoding="utf-8") as f:
                 content = f.read()
-                latest_version = "7.7.8"  # Обновлена версия
+                latest_version = "7.7.8"
             self.config["current_version"] = latest_version
             self._db["ShadowUpdate"]["update_log"] = f"Обновлено до {latest_version} в {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             self.log.info(f"Updated to version {latest_version}")
@@ -212,3 +217,84 @@ class ShadowUpdate(loader.Module):
         except Exception as e:
             self.log.error(f"Unexpected error during update: {str(e)}")
             await utils.answer(message, self.strings["update_error"].format(str(e)))
+
+    # Перенесенные команды из Shadow_Ultimat.py
+    @loader.command(ru_doc="Показать статус авто-фермы для @bfgbunker_bot")
+    async def sh(self, message: Message):
+        """Show auto-farm status for @bfgbunker_bot"""
+        if self.shadow_ultimat:
+            await self.shadow_ultimat.sh(message)
+        else:
+            await utils.answer(message, self.strings["load_error"].format("Shadow_Ultimat не загружен"))
+
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для людей в @bfgbunker_bot")
+    async def люди(self, message: Message):
+        """Toggle people auto-farm for @bfgbunker_bot"""
+        if self.shadow_ultimat:
+            await self.shadow_ultimat.люди(message)
+        else:
+            await utils.answer(message, self.strings["load_error"].format("Shadow_Ultimat не загружен"))
+
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для бонусов в @bfgbunker_bot")
+    async def бонус(self, message: Message):
+        """Toggle bonus auto-farm for @bfgbunker_bot"""
+        if self.shadow_ultimat:
+            await self.shadow_ultimat.бонус(message)
+        else:
+            await utils.answer(message, self.strings["load_error"].format("Shadow_Ultimat не загружен"))
+
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для бензина в @bfgbunker_bot")
+    async def бензин(self, message: Message):
+        """Toggle petrol auto-farm for @bfgbunker_bot"""
+        if self.shadow_ultimat:
+            await self.shadow_ultimat.бензин(message)
+        else:
+            await utils.answer(message, self.strings["load_error"].format("Shadow_Ultimat не загружен"))
+
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для теплицы в @bfgbunker_bot")
+    async def теплица(self, message: Message):
+        """Toggle greenhouse auto-farm for @bfgbunker_bot"""
+        if self.shadow_ultimat:
+            await self.shadow_ultimat.теплица(message)
+        else:
+            await utils.answer(message, self.strings["load_error"].format("Shadow_Ultimat не загружен"))
+
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для пустоши в @bfgbunker_bot")
+    async def пустошь(self, message: Message):
+        """Toggle wasteland auto-farm for @bfgbunker_bot"""
+        if self.shadow_ultimat:
+            await self.shadow_ultimat.пустошь(message)
+        else:
+            await utils.answer(message, self.strings["load_error"].format("Shadow_Ultimat не загружен"))
+
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для сада в @bfgbunker_bot")
+    async def сад(self, message: Message):
+        """Toggle garden auto-farm for @bfgbunker_bot"""
+        if self.shadow_ultimat:
+            await self.shadow_ultimat.сад(message)
+        else:
+            await utils.answer(message, self.strings["load_error"].format("Shadow_Ultimat не загружен"))
+
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для шахты в @bfgbunker_bot")
+    async def шахта(self, message: Message):
+        """Toggle mine auto-farm for @bfgbunker_bot"""
+        if self.shadow_ultimat:
+            await self.shadow_ultimat.шахта(message)
+        else:
+            await utils.answer(message, self.strings["load_error"].format("Shadow_Ultimat не загружен"))
+
+    @loader.command(ru_doc="Вкл/выкл авто-ферму для гильдии в @bfgbunker_bot")
+    async def гильдия(self, message: Message):
+        """Toggle guild auto-farm for @bfgbunker_bot"""
+        if self.shadow_ultimat:
+            await self.shadow_ultimat.гильдия(message)
+        else:
+            await utils.answer(message, self.strings["load_error"].format("Shadow_Ultimat не загружен"))
+
+    @loader.command(ru_doc="Установить новый префикс")
+    async def pref(self, message: Message):
+        """Set a new command prefix"""
+        if self.shadow_ultimat:
+            await self.shadow_ultimat.pref(message)
+        else:
+            await utils.answer(message, self.strings["load_error"].format("Shadow_Ultimat не загружен"))
