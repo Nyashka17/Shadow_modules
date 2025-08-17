@@ -52,15 +52,18 @@ class ShadowUltimatMod(loader.Module):
             spec = importlib.util.spec_from_loader(name, loader=None)
             module = importlib.util.module_from_spec(spec)
             sys.modules[name] = module
-            # Если модуль ожидает client и db, передаём их
+            # Если модуль имеет класс (например, People), создаём экземпляр
             if name == "Shadow_Ultimat_auto_People":
                 module.__init__ = lambda self: None  # Пропускаем стандартный __init__
                 instance = module.ShadowUltimatAutoPeople(self.client, self.db, self)
                 module.__dict__['instance'] = instance
             exec(code, module.__dict__)
+            # Проверяем наличие STATE, если его нет, устанавливаем False
+            if not hasattr(module, 'STATE'):
+                module.STATE = False
             return module
         except Exception as e:
-            print(f"Ошибка загрузки модуля {name}: {str(e)}")  # Корректная f-строка
+            print(f"Ошибка загрузки модуля {name}: {str(e)}")
             return None
 
     def fetch_module(self, url):
@@ -218,8 +221,8 @@ class ShadowUltimatMod(loader.Module):
             try:
                 module.STATE = not module.STATE
                 self.module_states[module_name] = module.STATE
-                # Запуск или остановка автофарма для модуля
-                if module_name == "People" and hasattr(module, 'instance'):
+                # Запуск или остановка автофарма для модуля с instance
+                if hasattr(module, 'instance') and hasattr(module.instance, 'start') and hasattr(module.instance, 'stop'):
                     if module.STATE:
                         await module.instance.start()
                     else:
@@ -238,7 +241,7 @@ class ShadowUltimatMod(loader.Module):
         self.load_modules()
         # Запуск активных модулей
         for name, module in self.loaded_modules.items():
-            if module and module.STATE and hasattr(module, 'instance'):
+            if module and getattr(module, "STATE", False) and hasattr(module, 'instance') and hasattr(module.instance, 'start'):
                 try:
                     await module.instance.start()
                 except Exception as e:
@@ -247,7 +250,7 @@ class ShadowUltimatMod(loader.Module):
     async def watcher(self, message: Message):
         """Обработка входящих сообщений для активных модулей."""
         for name, module in self.loaded_modules.items():
-            if module and module.STATE and hasattr(module, 'instance') and hasattr(module.instance, 'watcher'):
+            if module and getattr(module, "STATE", False) and hasattr(module, 'instance') and hasattr(module.instance, 'watcher'):
                 try:
                     await module.instance.watcher(message)
                 except Exception as e:
