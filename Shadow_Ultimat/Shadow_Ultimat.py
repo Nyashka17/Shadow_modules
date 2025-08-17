@@ -2,6 +2,7 @@ import importlib.util
 import sys
 import requests
 import os
+from herokutl.types import Message
 from .. import loader, utils
 
 @loader.tds
@@ -53,7 +54,7 @@ class ShadowUltimatMod(loader.Module):
             exec(code, module.__dict__)
             return module
         except Exception as e:
-            print(f"Ошибка загрузки модуля {name}: {str(e)}")  # Исправленная строка
+            print(f"Ошибка загрузки модуля {name}: {str(e)}")  # Корректная f-строка
             return None
 
     def fetch_module(self, url):
@@ -129,8 +130,8 @@ class ShadowUltimatMod(loader.Module):
         main_code = self.fetch_module(self.module_urls["Main"])
         if main_code:
             try:
-                # Проверка наличия __file__, fallback на имя файла
-                file_path = getattr(sys.modules.get(__name__), '__file__', 'Shadow_Ultimat.py')
+                # Проверка наличия __file__, fallback на /loaded_modules/Shadow_Ultimat.py
+                file_path = getattr(sys.modules.get(__name__), '__file__', os.path.join('loaded_modules', 'Shadow_Ultimat.py'))
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(main_code)
                 await utils.answer(message, "✅ Все модули и основной модуль обновлены! Перезагрузите бота для применения изменений.")
