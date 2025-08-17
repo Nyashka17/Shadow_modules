@@ -41,7 +41,8 @@ class ShadowUltimatMod(loader.Module):
         self.module_states = {name: False for name in self.modules}
         self.module_versions = {name: "Unknown" for name in self.modules}
         self.loaded_modules = {}  # Хранилище загруженных модулей
-        self.load_modules()
+        self.client = None  # Будет установлен в client_ready
+        self.db = None  # Будет установлен в client_ready
 
     def load_module_from_string(self, name, code):
         """Динамическая загрузка модуля из строки."""
@@ -51,6 +52,11 @@ class ShadowUltimatMod(loader.Module):
             spec = importlib.util.spec_from_loader(name, loader=None)
             module = importlib.util.module_from_spec(spec)
             sys.modules[name] = module
+            # Если модуль ожидает client и db, передаём их
+            if name == "Shadow_Ultimat_auto_People":
+                module.__init__ = lambda self: None  # Пропускаем стандартный __init__
+                instance = module.ShadowUltimatAutoPeople(self.client, self.db, self)
+                module.__dict__['instance'] = instance
             exec(code, module.__dict__)
             return module
         except Exception as e:
@@ -212,6 +218,12 @@ class ShadowUltimatMod(loader.Module):
             try:
                 module.STATE = not module.STATE
                 self.module_states[module_name] = module.STATE
+                # Запуск или остановка автофарма для модуля
+                if module_name == "People" and hasattr(module, 'instance'):
+                    if module.STATE:
+                        await module.instance.start()
+                    else:
+                        await module.instance.stop()
                 status = "включен" if module.STATE else "выключен"
                 await utils.answer(message, f"✅ {module_name}: Автофарм {status}")
             except Exception as e:
@@ -221,4 +233,22 @@ class ShadowUltimatMod(loader.Module):
 
     async def client_ready(self, client, db):
         """Инициализация модуля при запуске клиента."""
+        self.client = client
+        self.db = db
         self.load_modules()
+        # Запуск активных модулей
+        for name, module in self.loaded_modules.items():
+            if module and module.STATE and hasattr(module, 'instance'):
+                try:
+                    await module.instance.start()
+                except Exception as e:
+                    print(f"Ошибка при запуске модуля {name}: {str(e)}")
+
+    async def watcher(self, message: Message):
+        """Обработка входящих сообщений для активных модулей."""
+        for name, module in self.loaded_modules.items():
+            if module and module.STATE and hasattr(module, 'instance') and hasattr(module.instance, 'watcher'):
+                try:
+                    await module.instance.watcher(message)
+                except Exception as e:
+                    print(f"Ошибка в watcher модуля {name}: {str(e)}")
