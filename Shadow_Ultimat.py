@@ -839,7 +839,7 @@ class Shadow_Ultimat(loader.Module):
                 "guild_time", "mine_time", "garden_time", "wasteland_time"
             ]
             for key in keys:
-                self.db.pop("Shadow_Ultimat", key, None)
+                self.db.pop("Shadow_Ultimat", key)  # Удаляем ключ без значения по умолчанию
             await utils.answer(message, self.strings["db_cleared"])
         except Exception as e:
             await utils.answer(message, self.strings["db_clear_error"].format(error=str(e)))
