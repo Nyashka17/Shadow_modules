@@ -150,6 +150,8 @@ class Shadow_Ultimat(loader.Module):
         "capacity_error": "<b>Не удалось получить данные о бункере. Попробуйте позже.</b>",
         "no_reply_vl": "<b>Ответьте на сообщение от @bfgbunker_bot для обработки статистики бункера.</b>",
         "invalid_reply_vl": "<b>Сообщение, на которое вы ответили, не содержит корректной статистики бункера.</b>",
+        "db_cleared": "<b>База данных модуля Shadow_Ultimat успешно очищена!</b>",
+        "db_clear_error": "<b>Ошибка при очистке базы данных: {error}</b>"
     }
 
     class OnOffValidator(loader.validators.Validator):
@@ -164,83 +166,22 @@ class Shadow_Ultimat(loader.Module):
             raise loader.validators.ValidationError("Значение должно быть 'on' или 'off'")
 
         def _clean(self, value: str) -> str:
-            """Очистка значения для отображения в cfg"""
             return "вкл" if value == "on" else "выкл"
 
     def __init__(self):
         self.config = loader.ModuleConfig(
-            loader.ConfigValue(
-                "Auto_Бензин",
-                "off",
-                "Включить/выключить авто бензин (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Люди",
-                "off",
-                "Включить/выключить авто люди (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Бонус",
-                "off",
-                "Включить/выключить авто бонус (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Теплица",
-                "off",
-                "Включить/выключить авто теплица (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Гильдия_банки",
-                "off",
-                "Включить/выключить авто гильдия банки (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Гильдия_бутылки",
-                "off",
-                "Включить/выключить авто гильдия бутылки (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Гильдия_атака_ги",
-                "off",
-                "Включить/выключить авто гильдия атака ги (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Гильдия_атака_босса",
-                "off",
-                "Включить/выключить авто гильдия атака босса (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Гильдия_закуп",
-                "off",
-                "Включить/выключить авто гильдия закуп (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Шахта",
-                "off",
-                "Включить/выключить авто шахта (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Сад",
-                "off",
-                "Включить/выключить авто сад (on/off)",
-                validator=self.OnOffValidator()
-            ),
-            loader.ConfigValue(
-                "Auto_Пустошь",
-                "off",
-                "Включить/выключить авто пустошь (on/off)",
-                validator=self.OnOffValidator()
-            )
+            loader.ConfigValue("Auto_Бензин", "off", "Включить/выключить авто бензин (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Люди", "off", "Включить/выключить авто люди (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Бонус", "off", "Включить/выключить авто бонус (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Теплица", "off", "Включить/выключить авто теплица (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Гильдия_банки", "off", "Включить/выключить авто гильдия банки (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Гильдия_бутылки", "off", "Включить/выключить авто гильдия бутылки (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Гильдия_атака_ги", "off", "Включить/выключить авто гильдия атака ги (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Гильдия_атака_босса", "off", "Включить/выключить авто гильдия атака босса (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Гильдия_закуп", "off", "Включить/выключить авто гильдия закуп (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Шахта", "off", "Включить/выключить авто шахта (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Сад", "off", "Включить/выключить авто сад (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Auto_Пустошь", "off", "Включить/выключить авто пустошь (on/off)", validator=self.OnOffValidator())
         )
         self.bot = "@bfgbunker_bot"
         self.formatted_strings = {}
@@ -328,178 +269,170 @@ class Shadow_Ultimat(loader.Module):
         for version_info in self.version_history:
             version_info["formatted"] = version_info["formatted"].format(prefix=self.prefix)
 
-    async def _fuel(self):
+    async def _fuel(self, conv):
         """Метод для авто-фарма бензина"""
         try:
-            async with self.client.conversation(self.bot) as conv:
-                await asyncio.sleep(2)
-                await conv.send_message('Бензин')
-                r = await conv.get_response()
-                await asyncio.sleep(1)
-                if r.buttons:
-                    await r.click(0)
-                await self.client(ReadMentionsRequest(self.bot))
+            await asyncio.sleep(2)
+            await conv.send_message('Бензин')
+            r = await conv.get_response()
+            await asyncio.sleep(1)
+            if r.buttons:
+                await r.click(0)
+            await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме бензина: {e}")
 
-    async def _people(self):
-        """Заглушка для авто-фарма людей"""
+    async def _people(self, conv):
+        """Метод для авто-фарма людей"""
         try:
-            async with self.client.conversation(self.bot) as conv:
-                await asyncio.sleep(2)
-                await conv.send_message('Люди')
-                r = await conv.get_response()
-                await asyncio.sleep(1)
-                if r.buttons:
-                    await r.click(0)
-                await self.client(ReadMentionsRequest(self.bot))
+            await asyncio.sleep(2)
+            await conv.send_message('Люди')
+            r = await conv.get_response()
+            await asyncio.sleep(1)
+            if r.buttons:
+                await r.click(0)
+            await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме людей: {e}")
 
-    async def _bonus(self):
-        """Заглушка для авто-фарма бонусов"""
+    async def _bonus(self, conv):
+        """Метод для авто-фарма бонусов"""
         try:
-            async with self.client.conversation(self.bot) as conv:
-                await asyncio.sleep(2)
-                await conv.send_message('Бонус')
-                r = await conv.get_response()
-                await asyncio.sleep(1)
-                if r.buttons:
-                    await r.click(0)
-                await self.client(ReadMentionsRequest(self.bot))
+            await asyncio.sleep(2)
+            await conv.send_message('Бонус')
+            r = await conv.get_response()
+            await asyncio.sleep(1)
+            if r.buttons:
+                await r.click(0)
+            await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме бонусов: {e}")
 
-    async def _greenhouse(self):
-        """Заглушка для авто-фарма теплицы"""
+    async def _greenhouse(self, conv):
+        """Метод для авто-фарма теплицы"""
         try:
-            async with self.client.conversation(self.bot) as conv:
-                await asyncio.sleep(2)
-                await conv.send_message('Теплица')
-                r = await conv.get_response()
-                await asyncio.sleep(1)
-                if r.buttons:
-                    await r.click(0)
-                await self.client(ReadMentionsRequest(self.bot))
+            await asyncio.sleep(2)
+            await conv.send_message('Теплица')
+            r = await conv.get_response()
+            await asyncio.sleep(1)
+            if r.buttons:
+                await r.click(0)
+            await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме теплицы: {e}")
 
-    async def _guild(self):
-        """Заглушка для авто-фарма гильдии (банки, бутылки, атака ги, атака босса, закуп)"""
+    async def _guild(self, conv):
+        """Метод для авто-фарма гильдии"""
         try:
-            async with self.client.conversation(self.bot) as conv:
-                if self.config["Auto_Гильдия_банки"] == "on":
-                    await asyncio.sleep(2)
-                    await conv.send_message('Банки')
-                    r = await conv.get_response()
-                    await asyncio.sleep(1)
-                    if r.buttons:
-                        await r.click(0)
-                if self.config["Auto_Гильдия_бутылки"] == "on":
-                    await asyncio.sleep(2)
-                    await conv.send_message('Бутылки')
-                    r = await conv.get_response()
-                    await asyncio.sleep(1)
-                    if r.buttons:
-                        await r.click(0)
-                if self.config["Auto_Гильдия_атака_ги"] == "on":
-                    await asyncio.sleep(2)
-                    await conv.send_message('Атака ги')
-                    r = await conv.get_response()
-                    await asyncio.sleep(1)
-                    if r.buttons:
-                        await r.click(0)
-                if self.config["Auto_Гильдия_атака_босса"] == "on":
-                    await asyncio.sleep(2)
-                    await conv.send_message('Атака босса')
-                    r = await conv.get_response()
-                    await asyncio.sleep(1)
-                    if r.buttons:
-                        await r.click(0)
-                if self.config["Auto_Гильдия_закуп"] == "on":
-                    await asyncio.sleep(2)
-                    await conv.send_message('Закуп')
-                    r = await conv.get_response()
-                    await asyncio.sleep(1)
-                    if r.buttons:
-                        await r.click(0)
-                await self.client(ReadMentionsRequest(self.bot))
+            if self.config["Auto_Гильдия_банки"] == "on":
+                await asyncio.sleep(2)
+                await conv.send_message('Банки')
+                r = await conv.get_response()
+                await asyncio.sleep(1)
+                if r.buttons:
+                    await r.click(0)
+            if self.config["Auto_Гильдия_бутылки"] == "on":
+                await asyncio.sleep(2)
+                await conv.send_message('Бутылки')
+                r = await conv.get_response()
+                await asyncio.sleep(1)
+                if r.buttons:
+                    await r.click(0)
+            if self.config["Auto_Гильдия_атака_ги"] == "on":
+                await asyncio.sleep(2)
+                await conv.send_message('Атака ги')
+                r = await conv.get_response()
+                await asyncio.sleep(1)
+                if r.buttons:
+                    await r.click(0)
+            if self.config["Auto_Гильдия_атака_босса"] == "on":
+                await asyncio.sleep(2)
+                await conv.send_message('Атака босса')
+                r = await conv.get_response()
+                await asyncio.sleep(1)
+                if r.buttons:
+                    await r.click(0)
+            if self.config["Auto_Гильдия_закуп"] == "on":
+                await asyncio.sleep(2)
+                await conv.send_message('Закуп')
+                r = await conv.get_response()
+                await asyncio.sleep(1)
+                if r.buttons:
+                    await r.click(0)
+            await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме гильдии: {e}")
 
-    async def _mine(self):
-        """Заглушка для авто-фарма шахты"""
+    async def _mine(self, conv):
+        """Метод для авто-фарма шахты"""
         try:
-            async with self.client.conversation(self.bot) as conv:
-                await asyncio.sleep(2)
-                await conv.send_message('Шахта')
-                r = await conv.get_response()
-                await asyncio.sleep(1)
-                if r.buttons:
-                    await r.click(0)
-                await self.client(ReadMentionsRequest(self.bot))
+            await asyncio.sleep(2)
+            await conv.send_message('Шахта')
+            r = await conv.get_response()
+            await asyncio.sleep(1)
+            if r.buttons:
+                await r.click(0)
+            await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме шахты: {e}")
 
-    async def _garden(self):
-        """Заглушка для авто-фарма сада"""
+    async def _garden(self, conv):
+        """Метод для авто-фарма сада"""
         try:
-            async with self.client.conversation(self.bot) as conv:
-                await asyncio.sleep(2)
-                await conv.send_message('Сад')
-                r = await conv.get_response()
-                await asyncio.sleep(1)
-                if r.buttons:
-                    await r.click(0)
-                await self.client(ReadMentionsRequest(self.bot))
+            await asyncio.sleep(2)
+            await conv.send_message('Сад')
+            r = await conv.get_response()
+            await asyncio.sleep(1)
+            if r.buttons:
+                await r.click(0)
+            await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме сада: {e}")
 
-    async def _wasteland(self):
-        """Заглушка для авто-фарма пустоши"""
+    async def _wasteland(self, conv):
+        """Метод для авто-фарма пустоши"""
         try:
-            async with self.client.conversation(self.bot) as conv:
-                await asyncio.sleep(2)
-                await conv.send_message('Пустошь')
-                r = await conv.get_response()
-                await asyncio.sleep(1)
-                if r.buttons:
-                    await r.click(0)
-                await self.client(ReadMentionsRequest(self.bot))
+            await asyncio.sleep(2)
+            await conv.send_message('Пустошь')
+            r = await conv.get_response()
+            await asyncio.sleep(1)
+            if r.buttons:
+                await r.click(0)
+            await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме пустоши: {e}")
 
     async def watcher(self, message: TelethonMessage):
-        """Основной цикл для авто-фарма"""
+        """Основной цикл для авто-фарма с индивидуальными кулдаунами"""
         while True:
             try:
+                # Проверяем, есть ли активные авто-фармы, готовые к выполнению
+                tasks = []
+                current_time = time.time()
+
                 # Авто Бензин
                 if self.config["Auto_Бензин"] == "on":
                     fuel_time = self.db.get("Shadow_Ultimat", "fuel_time", 0)
-                    if not fuel_time or (time.time() - fuel_time) >= 3629:
-                        await self._fuel()
-                        self.db.set("Shadow_Ultimat", "fuel_time", int(time.time()))
+                    if not fuel_time or (current_time - fuel_time) >= 3629:
+                        tasks.append(("fuel", self._fuel, 3629))
 
                 # Авто Люди
                 if self.config["Auto_Люди"] == "on":
                     people_time = self.db.get("Shadow_Ultimat", "people_time", 0)
-                    if not people_time or (time.time() - people_time) >= 3600:  # Предполагаемый интервал
-                        await self._people()
-                        self.db.set("Shadow_Ultimat", "people_time", int(time.time()))
+                    if not people_time or (current_time - people_time) >= 3600:
+                        tasks.append(("people", self._people, 3600))
 
                 # Авто Бонус
                 if self.config["Auto_Бонус"] == "on":
                     bonus_time = self.db.get("Shadow_Ultimat", "bonus_time", 0)
-                    if not bonus_time or (time.time() - bonus_time) >= 3600:  # Предполагаемый интервал
-                        await self._bonus()
-                        self.db.set("Shadow_Ultimat", "bonus_time", int(time.time()))
+                    if not bonus_time or (current_time - bonus_time) >= 7200:
+                        tasks.append(("bonus", self._bonus, 7200))
 
                 # Авто Теплица
                 if self.config["Auto_Теплица"] == "on":
                     greenhouse_time = self.db.get("Shadow_Ultimat", "greenhouse_time", 0)
-                    if not greenhouse_time or (time.time() - greenhouse_time) >= 3600:  # Предполагаемый интервал
-                        await self._greenhouse()
-                        self.db.set("Shadow_Ultimat", "greenhouse_time", int(time.time()))
+                    if not greenhouse_time or (current_time - greenhouse_time) >= 3600:
+                        tasks.append(("greenhouse", self._greenhouse, 3600))
 
                 # Авто Гильдия
                 if any(self.config[key] == "on" for key in [
@@ -508,30 +441,33 @@ class Shadow_Ultimat(loader.Module):
                     "Auto_Гильдия_закуп"
                 ]):
                     guild_time = self.db.get("Shadow_Ultimat", "guild_time", 0)
-                    if not guild_time or (time.time() - guild_time) >= 3600:  # Предполагаемый интервал
-                        await self._guild()
-                        self.db.set("Shadow_Ultimat", "guild_time", int(time.time()))
+                    if not guild_time or (current_time - guild_time) >= 3600:
+                        tasks.append(("guild", self._guild, 3600))
 
                 # Авто Шахта
                 if self.config["Auto_Шахта"] == "on":
                     mine_time = self.db.get("Shadow_Ultimat", "mine_time", 0)
-                    if not mine_time or (time.time() - mine_time) >= 3600:  # Предполагаемый интервал
-                        await self._mine()
-                        self.db.set("Shadow_Ultimat", "mine_time", int(time.time()))
+                    if not mine_time or (current_time - mine_time) >= 3600:
+                        tasks.append(("mine", self._mine, 3600))
 
                 # Авто Сад
                 if self.config["Auto_Сад"] == "on":
                     garden_time = self.db.get("Shadow_Ultimat", "garden_time", 0)
-                    if not garden_time or (time.time() - garden_time) >= 3600:  # Предполагаемый интервал
-                        await self._garden()
-                        self.db.set("Shadow_Ultimat", "garden_time", int(time.time()))
+                    if not garden_time or (current_time - garden_time) >= 3600:
+                        tasks.append(("garden", self._garden, 3600))
 
                 # Авто Пустошь
                 if self.config["Auto_Пустошь"] == "on":
                     wasteland_time = self.db.get("Shadow_Ultimat", "wasteland_time", 0)
-                    if not wasteland_time or (time.time() - wasteland_time) >= 3600:  # Предполагаемый интервал
-                        await self._wasteland()
-                        self.db.set("Shadow_Ultimat", "wasteland_time", int(time.time()))
+                    if not wasteland_time or (current_time - wasteland_time) >= 3600:
+                        tasks.append(("wasteland", self._wasteland, 3600))
+
+                # Если есть задачи, открываем сессию conversation и выполняем их
+                if tasks:
+                    async with self.client.conversation(self.bot, timeout=30) as conv:
+                        for task_name, task_func, cooldown in tasks:
+                            await task_func(conv)
+                            self.db.set("Shadow_Ultimat", f"{task_name}_time", int(time.time()))
 
                 await asyncio.sleep(60)  # Проверка каждую минуту
             except Exception as e:
@@ -893,6 +829,20 @@ class Shadow_Ultimat(loader.Module):
         )
 
         await utils.answer(message, f"<blockquote>{formatted_message}</blockquote>", reply_to=reply)
+
+    async def очисткабдcmd(self, message: TelethonMessage):
+        """Очистить базу данных модуля Shadow_Ultimat"""
+        try:
+            # Список ключей, которые нужно удалить
+            keys = [
+                "fuel_time", "people_time", "bonus_time", "greenhouse_time",
+                "guild_time", "mine_time", "garden_time", "wasteland_time"
+            ]
+            for key in keys:
+                self.db.pop("Shadow_Ultimat", key, None)
+            await utils.answer(message, self.strings["db_cleared"])
+        except Exception as e:
+            await utils.answer(message, self.strings["db_clear_error"].format(error=str(e)))
 
     def format_number(self, number):
         number_str = str(number)
