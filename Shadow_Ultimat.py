@@ -1,4 +1,4 @@
-__version__ = (7, 7, 7, 0, 1, 0)
+__version__ = (7, 7, 7, 0, 1, 5)
 # meta developer: @shadow_mod777
 
 import logging
@@ -7,7 +7,8 @@ import asyncio
 import typing
 import re
 from telethon.tl.functions.messages import ReadMentionsRequest
-from telethon.tl.types import Message as TelethonMessage
+from telethon.tl.functions.channels import InviteToChannelRequest, EditAdminRequest
+from telethon.tl.types import ChatAdminRights
 from .. import loader, utils
 from ..inline.types import InlineCall
 
@@ -123,6 +124,8 @@ class Shadow_Ultimat(loader.Module):
         "auto_garden_off": "🌳 Авто Сад: ❌",
         "auto_wasteland_on": "🏜 Авто Пустошь: ✅",
         "auto_wasteland_off": "🏜 Авто Пустошь: ❌",
+        "log_watcher_on": "📜 Логирование ошибок Watcher: ✅",
+        "log_watcher_off": "📜 Логирование ошибок Watcher: ❌",
         "version_prev": "⬅️ Предыдущая",
         "version_next": "Следующая ➡️",
         "no_reply": "<b>Ответь на сообщение с информацией о бутылках!</b>",
@@ -151,7 +154,11 @@ class Shadow_Ultimat(loader.Module):
         "no_reply_vl": "<b>Ответьте на сообщение от @bfgbunker_bot для обработки статистики бункера.</b>",
         "invalid_reply_vl": "<b>Сообщение, на которое вы ответили, не содержит корректной статистики бункера.</b>",
         "db_cleared": "<b>База данных модуля Shadow_Ultimat успешно очищена!</b>",
-        "db_clear_error": "<b>Ошибка при очистке базы данных: {error}</b>"
+        "db_clear_error": "<b>Ошибка при очистке базы данных: {error}</b>",
+        "invalid_chat_id": "<b>Укажите корректный ID третьего чата (целое число) в настройках.</b>",
+        "channel_creation_error": "<b>Ошибка при создании второго чата: {error}</b>",
+        "greenhouse_error": "<b>Ошибка в авто-фарме теплицы: {error}</b>",
+        "no_resources_available": "<b>В теплице недостаточно воды или ресурсов для выращивания.</b>"
     }
 
     class OnOffValidator(loader.validators.Validator):
@@ -168,6 +175,34 @@ class Shadow_Ultimat(loader.Module):
         def _clean(self, value: str) -> str:
             return "вкл" if value == "on" else "выкл"
 
+    class ChatAssignmentValidator(loader.validators.Validator):
+        """Валидатор для распределения авто-фармов по чатам"""
+        def __init__(self):
+            super().__init__(self._validate, {"en": "main/secondary/tertiary", "ru": "основной/вторичный/третий"})
+
+        @staticmethod
+        def _validate(value: typing.Any) -> dict:
+            default = {
+                "Auto_Бензин": "main",
+                "Auto_Люди": "main",
+                "Auto_Бонус": "main",
+                "Auto_Теплица": "main",
+                "Auto_Гильдия_банки": "secondary",
+                "Auto_Гильдия_бутылки": "secondary",
+                "Auto_Гильдия_атака_ги": "tertiary",
+                "Auto_Гильдия_атака_босса": "tertiary",
+                "Auto_Гильдия_закуп": "secondary",
+                "Auto_Шахта": "secondary",
+                "Auto_Сад": "secondary",
+                "Auto_Пустошь": "secondary"
+            }
+            if not isinstance(value, dict):
+                return default
+            for key in default:
+                if key not in value or value[key] not in ["main", "secondary", "tertiary"]:
+                    value[key] = default[key]
+            return value
+
     def __init__(self):
         self.config = loader.ModuleConfig(
             loader.ConfigValue("Auto_Бензин", "off", "Включить/выключить авто бензин (on/off)", validator=self.OnOffValidator()),
@@ -181,9 +216,22 @@ class Shadow_Ultimat(loader.Module):
             loader.ConfigValue("Auto_Гильдия_закуп", "off", "Включить/выключить авто гильдия закуп (on/off)", validator=self.OnOffValidator()),
             loader.ConfigValue("Auto_Шахта", "off", "Включить/выключить авто шахта (on/off)", validator=self.OnOffValidator()),
             loader.ConfigValue("Auto_Сад", "off", "Включить/выключить авто сад (on/off)", validator=self.OnOffValidator()),
-            loader.ConfigValue("Auto_Пустошь", "off", "Включить/выключить авто пустошь (on/off)", validator=self.OnOffValidator())
+            loader.ConfigValue("Auto_Пустошь", "off", "Включить/выключить авто пустошь (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Secondary_Chat_ID", 0, "ID второго чата для авто-фарма (заполняется автоматически при создании)"),
+            loader.ConfigValue("Tertiary_Chat_ID", 0, "ID третьего чата для авто-фарма гильдии (атака ги/босса) (0 для отключения)"),
+            loader.ConfigValue("Farm_Chat_Assignment", {}, "Распределение авто-фармов по чатам", validator=self.ChatAssignmentValidator()),
+            loader.ConfigValue("Log_Watcher_Errors", "on", "Включить/выключить логирование ошибок в Watcher (on/off)", validator=self.OnOffValidator())
         )
         self.bot = "@bfgbunker_bot"
+        self._resources_map = {
+            range(0, 501): "картошку",
+            range(501, 2001): "морковь",
+            range(2001, 10001): "рис",
+            range(10001, 25001): "свеклу",
+            range(25001, 60001): "огурец",
+            range(60001, 100001): "фасоль",
+            range(100001, 10**50): "помидор",
+        }
         self.formatted_strings = {}
         self.version_history = [
             {
@@ -223,8 +271,8 @@ class Shadow_Ultimat(loader.Module):
             },
             {
                 "version": (7, 7, 7, 0, 0, 6),
-                "description": "Обновлен дизайн команды .вл с отображением всех 18 комнат и индикатором 🆙 для комнаты с минимальной вместимостью",
-                "formatted": "🗃 Обновлен дизайн команды <code>{prefix}вл</code> с отображением всех 18 комнат и индикатором 🆙 для комнаты с минимальной вместимостью"
+                "description": "Обновлен дизайн команды .вл с отображением всех 18 комнат и индикатором 🆙 для комнаты с минимальной вместимости",
+                "formatted": "🗃 Обновлен дизайн команды <code>{prefix}вл</code> с отображением всех 18 комнат и индикатором 🆙 для минимальной вместимости"
             },
             {
                 "version": (7, 7, 7, 0, 0, 7),
@@ -234,7 +282,7 @@ class Shadow_Ultimat(loader.Module):
             {
                 "version": (7, 7, 7, 0, 0, 8),
                 "description": "Обновлен дизайн команды .вл с единым блоком цитирования и отправкой новым сообщением",
-                "formatted": "🗃 Обновлен дизайн команды <code>{prefix}вл</code> с единым блоком цитирования и отправкой новым сообщением"
+                "formatted": "🗃 Обновлен дизайн команды <code>{prefix}вл</code> с единым блоком цитирования и отправкой new сообщением"
             },
             {
                 "version": (7, 7, 7, 0, 0, 9),
@@ -245,6 +293,31 @@ class Shadow_Ultimat(loader.Module):
                 "version": (7, 7, 7, 0, 1, 0),
                 "description": "Добавлен функционал авто-фарма бензина",
                 "formatted": "🗃 Добавлен авто-фарм бензина с проверкой по таймеру каждые 3629 секунд"
+            },
+            {
+                "version": (7, 7, 7, 0, 1, 1),
+                "description": "Добавлена поддержка двух чатов и изолированных сессий для авто-фармов",
+                "formatted": "🗃 Добавлена поддержка двух чатов и изолированных сессий для авто-фармов с корректным завершением"
+            },
+            {
+                "version": (7, 7, 7, 0, 1, 2),
+                "description": "Добавлена поддержка третьего чата для авто-фарма атак гильдии (атака ги/босса)",
+                "formatted": "🗃 Добавлена поддержка третьего чата для авто-фарма Auto_Гильдия_атака_ги и Auto_Гильдия_атака_босса"
+            },
+            {
+                "version": (7, 7, 7, 0, 1, 3),
+                "description": "Добавлено автоматическое создание второго чата для авто-фарма",
+                "formatted": "🗃 Добавлено автоматическое создание второго чата 'BFGB <SH-U2> - чат' для функций, назначенных на secondary"
+            },
+            {
+                "version": (7, 7, 7, 0, 1, 4),
+                "description": "Добавлена полноценная реализация авто-фарма теплицы с выбором ресурсов на основе опыта",
+                "formatted": "🗃 Добавлена полноценная реализация авто-фарма теплицы с выбором ресурсов на основе опыта и поддержкой распределения по чатам"
+            },
+            {
+                "version": (7, 7, 7, 0, 1, 5),
+                "description": "Добавлена команда .логивыкл для включения/выключения логирования ошибок Watcher",
+                "formatted": "🗃 Добавлена команда <code>{prefix}логивыкл</code> для управления логированием ошибок Watcher"
             }
         ]
         self.result_list = []
@@ -256,6 +329,8 @@ class Shadow_Ultimat(loader.Module):
         self.total_bottles_str = ""
         self.total_monday_bottles_str = ""
         self.total_five_percent_bonus_str = ""
+        self.tasks = {}  # Для хранения задач авто-фарма
+        self._BFGB_SHU2_channel = None  # Для хранения объекта второго чата
 
     async def client_ready(self, client, db):
         self.client = client
@@ -264,10 +339,107 @@ class Shadow_Ultimat(loader.Module):
             self.db.get("hikka.main", "command_prefix", None) or
             self.db.get("heroku.main", "command_prefix", ".")
         )
+        # Создание второго чата
+        try:
+            self._BFGB_SHU2_channel, _ = await utils.asset_channel(
+                self.client,
+                "BFGB <SH-U2> - чат",
+                "Этот чат предназначен для модуля SHADOW ULTIMATE от @familiarrrrrr",
+                silent=True,
+                archive=False,
+                _folder="heroku",
+            )
+            await self.client(InviteToChannelRequest(self._BFGB_SHU2_channel, ['@bfgbunker_bot']))
+            await self.client(EditAdminRequest(
+                channel=self._BFGB_SHU2_channel,
+                user_id="@bfgbunker_bot",
+                admin_rights=ChatAdminRights(ban_users=True, post_messages=True, edit_messages=True),
+                rank="Bfgbunker_SH",
+            ))
+            # Сохраняем ID созданного чата в конфигурацию
+            self.config["Secondary_Chat_ID"] = self._BFGB_SHU2_channel.id
+        except Exception as e:
+            if self.config["Log_Watcher_Errors"] == "on":
+                logger.error(f"Ошибка при создании второго чата: {e}")
+            await self.client.send_message("me", self.strings["channel_creation_error"].format(error=str(e)))
+            self.config["Secondary_Chat_ID"] = 0
+        # Форматирование строк
         for i in range(1, 12):
             self.formatted_strings[f"section_{i}"] = self.strings[f"section_{i}"].format(prefix=self.prefix)
         for version_info in self.version_history:
             version_info["formatted"] = version_info["formatted"].format(prefix=self.prefix)
+        # Запускаем watcher для каждой функции
+        await self._start_watchers()
+
+    async def _start_watchers(self):
+        """Запускает отдельные циклы для каждой функции авто-фарма"""
+        farm_configs = [
+            ("Auto_Бензин", "fuel", self._fuel, 3629),
+            ("Auto_Люди", "people", self._people, 3600),
+            ("Auto_Бонус", "bonus", self._bonus, 7200),
+            ("Auto_Теплица", "greenhouse", self._greenhouse, 1212),
+            ("Auto_Гильдия_банки", "guild", self._guild, 3600),
+            ("Auto_Шахта", "mine", self._mine, 3600),
+            ("Auto_Сад", "garden", self._garden, 3600),
+            ("Auto_Пустошь", "wasteland", self._wasteland, 3600)
+        ]
+        for config_key, task_name, task_func, cooldown in farm_configs:
+            if self.config[config_key] == "on":
+                if task_name not in self.tasks or self.tasks[task_name].done():
+                    self.tasks[task_name] = asyncio.create_task(self._watcher(task_name, task_func, cooldown))
+
+    async def _stop_watcher(self, task_name: str):
+        """Останавливает цикл авто-фарма"""
+        if task_name in self.tasks and not self.tasks[task_name].done():
+            self.tasks[task_name].cancel()
+            try:
+                await self.tasks[task_name]
+            except asyncio.CancelledError:
+                pass
+            del self.tasks[task_name]
+
+    async def _watcher(self, task_name: str, task_func: callable, cooldown: int):
+        """Цикл для отдельной функции авто-фарма"""
+        chat_assignment = self.config["Farm_Chat_Assignment"].get(task_name, "main")
+        if chat_assignment == "main":
+            chat_id = self.bot
+        elif chat_assignment == "secondary":
+            chat_id = self.config["Secondary_Chat_ID"]
+            if chat_id == 0:
+                if self.config["Log_Watcher_Errors"] == "on":
+                    logger.error(f"ID второго чата не указан для {task_name}")
+                return
+        else:  # tertiary
+            chat_id = self.config["Tertiary_Chat_ID"]
+            if chat_id == 0:
+                if self.config["Log_Watcher_Errors"] == "on":
+                    logger.error(f"ID третьего чата не указан для {task_name}")
+                return
+        config_key = (
+            task_name.replace("fuel", "Auto_Бензин")
+            .replace("people", "Auto_Люди")
+            .replace("bonus", "Auto_Бонус")
+            .replace("greenhouse", "Auto_Теплица")
+            .replace("guild", "Auto_Гильдия_банки")
+            .replace("mine", "Auto_Шахта")
+            .replace("garden", "Auto_Сад")
+            .replace("wasteland", "Auto_Пустошь")
+        )
+        while self.config.get(config_key) == "on":
+            try:
+                current_time = time.time()
+                last_time = self.db.get("Shadow_Ultimat", f"{task_name}_time", 0)
+                if not last_time or (current_time - last_time) >= cooldown:
+                    async with self.client.conversation(chat_id, timeout=30) as conv:
+                        await task_func(conv)
+                        self.db.set("Shadow_Ultimat", f"{task_name}_time", int(time.time()))
+                await asyncio.sleep(60)  # Проверка каждую минуту
+            except Exception as e:
+                if self.config["Log_Watcher_Errors"] == "on":
+                    logger.error(f"Ошибка в watcher для {task_name}: {e}")
+                if task_name == "greenhouse":
+                    await self.client.send_message("me", self.strings["greenhouse_error"].format(error=str(e)))
+                await asyncio.sleep(60)
 
     async def _fuel(self, conv):
         """Метод для авто-фарма бензина"""
@@ -311,54 +483,72 @@ class Shadow_Ultimat(loader.Module):
     async def _greenhouse(self, conv):
         """Метод для авто-фарма теплицы"""
         try:
+            # Получаем информацию о теплице
             await asyncio.sleep(2)
-            await conv.send_message('Теплица')
+            await conv.send_message("Моя теплица")
             r = await conv.get_response()
-            await asyncio.sleep(1)
-            if r.buttons:
-                await r.click(0)
+            green_exp_match = re.search(r"Опыт: (\d+)", r.raw_text)
+            water_match = re.search(r"Вода: (\d+)/\d+", r.raw_text)
+            if not (green_exp_match and water_match):
+                await self.client.send_message("me", self.strings["no_resources_available"])
+                return
+            green_exp = int(green_exp_match.group(1))
+            water = int(water_match.group(1))
+            # Определяем ресурс для выращивания
+            resource = next(resource for range_, resource in self._resources_map.items() if green_exp in range_)
+            # Выращиваем, пока есть вода
+            while water > 0:
+                await asyncio.sleep(1.5)
+                await conv.send_message(f"вырастить {resource}")
+                r = await conv.get_response()
+                if "у тебя не хватает" in r.raw_text:
+                    break
+                if "успешно вырастил(-а)" in r.raw_text:
+                    water -= 1
             await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме теплицы: {e}")
+            await self.client.send_message("me", self.strings["greenhouse_error"].format(error=str(e)))
 
     async def _guild(self, conv):
         """Метод для авто-фарма гильдии"""
         try:
-            if self.config["Auto_Гильдия_банки"] == "on":
+            if self.config["Auto_Гильдия_банки"] == "on" and self.config["Farm_Chat_Assignment"].get("guild", "secondary") == "secondary":
                 await asyncio.sleep(2)
                 await conv.send_message('Банки')
                 r = await conv.get_response()
                 await asyncio.sleep(1)
                 if r.buttons:
                     await r.click(0)
-            if self.config["Auto_Гильдия_бутылки"] == "on":
+            if self.config["Auto_Гильдия_бутылки"] == "on" and self.config["Farm_Chat_Assignment"].get("guild", "secondary") == "secondary":
                 await asyncio.sleep(2)
                 await conv.send_message('Бутылки')
                 r = await conv.get_response()
                 await asyncio.sleep(1)
                 if r.buttons:
                     await r.click(0)
-            if self.config["Auto_Гильдия_атака_ги"] == "on":
-                await asyncio.sleep(2)
-                await conv.send_message('Атака ги')
-                r = await conv.get_response()
-                await asyncio.sleep(1)
-                if r.buttons:
-                    await r.click(0)
-            if self.config["Auto_Гильдия_атака_босса"] == "on":
-                await asyncio.sleep(2)
-                await conv.send_message('Атака босса')
-                r = await conv.get_response()
-                await asyncio.sleep(1)
-                if r.buttons:
-                    await r.click(0)
-            if self.config["Auto_Гильдия_закуп"] == "on":
+            if self.config["Auto_Гильдия_закуп"] == "on" and self.config["Farm_Chat_Assignment"].get("guild", "secondary") == "secondary":
                 await asyncio.sleep(2)
                 await conv.send_message('Закуп')
                 r = await conv.get_response()
                 await asyncio.sleep(1)
                 if r.buttons:
                     await r.click(0)
+            if (self.config["Auto_Гильдия_атака_ги"] == "on" or self.config["Auto_Гильдия_атака_босса"] == "on") and self.config["Farm_Chat_Assignment"].get("guild", "tertiary") == "tertiary":
+                if self.config["Auto_Гильдия_атака_ги"] == "on":
+                    await asyncio.sleep(2)
+                    await conv.send_message('Атака ги')
+                    r = await conv.get_response()
+                    await asyncio.sleep(1)
+                    if r.buttons:
+                        await r.click(0)
+                if self.config["Auto_Гильдия_атака_босса"] == "on":
+                    await asyncio.sleep(2)
+                    await conv.send_message('Атака босса')
+                    r = await conv.get_response()
+                    await asyncio.sleep(1)
+                    if r.buttons:
+                        await r.click(0)
             await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме гильдии: {e}")
@@ -402,79 +592,7 @@ class Shadow_Ultimat(loader.Module):
         except Exception as e:
             logger.error(f"Ошибка в авто-фарме пустоши: {e}")
 
-    async def watcher(self, message: TelethonMessage):
-        """Основной цикл для авто-фарма с индивидуальными кулдаунами"""
-        while True:
-            try:
-                # Проверяем, есть ли активные авто-фармы, готовые к выполнению
-                tasks = []
-                current_time = time.time()
-
-                # Авто Бензин
-                if self.config["Auto_Бензин"] == "on":
-                    fuel_time = self.db.get("Shadow_Ultimat", "fuel_time", 0)
-                    if not fuel_time or (current_time - fuel_time) >= 3629:
-                        tasks.append(("fuel", self._fuel, 3629))
-
-                # Авто Люди
-                if self.config["Auto_Люди"] == "on":
-                    people_time = self.db.get("Shadow_Ultimat", "people_time", 0)
-                    if not people_time or (current_time - people_time) >= 3600:
-                        tasks.append(("people", self._people, 3600))
-
-                # Авто Бонус
-                if self.config["Auto_Бонус"] == "on":
-                    bonus_time = self.db.get("Shadow_Ultimat", "bonus_time", 0)
-                    if not bonus_time or (current_time - bonus_time) >= 7200:
-                        tasks.append(("bonus", self._bonus, 7200))
-
-                # Авто Теплица
-                if self.config["Auto_Теплица"] == "on":
-                    greenhouse_time = self.db.get("Shadow_Ultimat", "greenhouse_time", 0)
-                    if not greenhouse_time or (current_time - greenhouse_time) >= 3600:
-                        tasks.append(("greenhouse", self._greenhouse, 3600))
-
-                # Авто Гильдия
-                if any(self.config[key] == "on" for key in [
-                    "Auto_Гильдия_банки", "Auto_Гильдия_бутылки", 
-                    "Auto_Гильдия_атака_ги", "Auto_Гильдия_атака_босса", 
-                    "Auto_Гильдия_закуп"
-                ]):
-                    guild_time = self.db.get("Shadow_Ultimat", "guild_time", 0)
-                    if not guild_time or (current_time - guild_time) >= 3600:
-                        tasks.append(("guild", self._guild, 3600))
-
-                # Авто Шахта
-                if self.config["Auto_Шахта"] == "on":
-                    mine_time = self.db.get("Shadow_Ultimat", "mine_time", 0)
-                    if not mine_time or (current_time - mine_time) >= 3600:
-                        tasks.append(("mine", self._mine, 3600))
-
-                # Авто Сад
-                if self.config["Auto_Сад"] == "on":
-                    garden_time = self.db.get("Shadow_Ultimat", "garden_time", 0)
-                    if not garden_time or (current_time - garden_time) >= 3600:
-                        tasks.append(("garden", self._garden, 3600))
-
-                # Авто Пустошь
-                if self.config["Auto_Пустошь"] == "on":
-                    wasteland_time = self.db.get("Shadow_Ultimat", "wasteland_time", 0)
-                    if not wasteland_time or (current_time - wasteland_time) >= 3600:
-                        tasks.append(("wasteland", self._wasteland, 3600))
-
-                # Если есть задачи, открываем сессию conversation и выполняем их
-                if tasks:
-                    async with self.client.conversation(self.bot, timeout=30) as conv:
-                        for task_name, task_func, cooldown in tasks:
-                            await task_func(conv)
-                            self.db.set("Shadow_Ultimat", f"{task_name}_time", int(time.time()))
-
-                await asyncio.sleep(60)  # Проверка каждую минуту
-            except Exception as e:
-                logger.error(f"Ошибка в цикле watcher: {e}")
-                await asyncio.sleep(60)
-
-    async def гайдcmd(self, message: TelethonMessage):
+    async def гайдcmd(self, message):
         """Показать гайд Shadow_Ultimat"""
         await utils.answer(
             message,
@@ -482,35 +600,51 @@ class Shadow_Ultimat(loader.Module):
             reply_markup=self._get_main_menu()
         )
 
-    async def бензинcmd(self, message: TelethonMessage):
+    async def бензинcmd(self, message):
         """Включить/выключить или показать статус Авто Бензин"""
         current_state = self.config["Auto_Бензин"]
         self.config["Auto_Бензин"] = "on" if current_state == "off" else "off"
         state_str = self.strings["auto_benzin_on"] if self.config["Auto_Бензин"] == "on" else self.strings["auto_benzin_off"]
+        if self.config["Auto_Бензин"] == "on":
+            await self._start_watchers()
+        else:
+            await self._stop_watcher("fuel")
         await utils.answer(message, state_str)
 
-    async def людиcmd(self, message: TelethonMessage):
+    async def людиcmd(self, message):
         """Включить/выключить или показать статус Авто Люди"""
         current_state = self.config["Auto_Люди"]
         self.config["Auto_Люди"] = "on" if current_state == "off" else "off"
         state_str = self.strings["auto_people_on"] if self.config["Auto_Люди"] == "on" else self.strings["auto_people_off"]
+        if self.config["Auto_Люди"] == "on":
+            await self._start_watchers()
+        else:
+            await self._stop_watcher("people")
         await utils.answer(message, state_str)
 
-    async def бонусcmd(self, message: TelethonMessage):
+    async def бонусcmd(self, message):
         """Включить/выключить или показать статус Авто Бонус"""
         current_state = self.config["Auto_Бонус"]
         self.config["Auto_Бонус"] = "on" if current_state == "off" else "off"
         state_str = self.strings["auto_bonus_on"] if self.config["Auto_Бонус"] == "on" else self.strings["auto_bonus_off"]
+        if self.config["Auto_Бонус"] == "on":
+            await self._start_watchers()
+        else:
+            await self._stop_watcher("bonus")
         await utils.answer(message, state_str)
 
-    async def теплицаcmd(self, message: TelethonMessage):
+    async def теплицаcmd(self, message):
         """Включить/выключить или показать статус Авто Теплица"""
         current_state = self.config["Auto_Теплица"]
         self.config["Auto_Теплица"] = "on" if current_state == "off" else "off"
         state_str = self.strings["auto_greenhouse_on"] if self.config["Auto_Теплица"] == "on" else self.strings["auto_greenhouse_off"]
+        if self.config["Auto_Теплица"] == "on":
+            await self._start_watchers()
+        else:
+            await self._stop_watcher("greenhouse")
         await utils.answer(message, state_str)
 
-    async def гильдияcmd(self, message: TelethonMessage):
+    async def гильдияcmd(self, message):
         """Включить/выключить или показать статус Авто Гильдия"""
         current_state = self.config["Auto_Гильдия_банки"]
         self.config["Auto_Гильдия_банки"] = "on" if current_state == "off" else "off"
@@ -519,30 +653,53 @@ class Shadow_Ultimat(loader.Module):
         self.config["Auto_Гильдия_атака_босса"] = "on" if current_state == "off" else "off"
         self.config["Auto_Гильдия_закуп"] = "on" if current_state == "off" else "off"
         state_str = self.strings["auto_guild_on"] if self.config["Auto_Гильдия_банки"] == "on" else self.strings["auto_guild_off"]
+        if self.config["Auto_Гильдия_банки"] == "on" or self.config["Auto_Гильдия_атака_ги"] == "on" or self.config["Auto_Гильдия_атака_босса"] == "on":
+            await self._start_watchers()
+        else:
+            await self._stop_watcher("guild")
         await utils.answer(message, state_str)
 
-    async def шахтаcmd(self, message: TelethonMessage):
+    async def шахтаcmd(self, message):
         """Включить/выключить или показать статус Авто Шахта"""
         current_state = self.config["Auto_Шахта"]
         self.config["Auto_Шахта"] = "on" if current_state == "off" else "off"
         state_str = self.strings["auto_mine_on"] if self.config["Auto_Шахта"] == "on" else self.strings["auto_mine_off"]
+        if self.config["Auto_Шахта"] == "on":
+            await self._start_watchers()
+        else:
+            await self._stop_watcher("mine")
         await utils.answer(message, state_str)
 
-    async def садcmd(self, message: TelethonMessage):
+    async def садcmd(self, message):
         """Включить/выключить или показать статус Авто Сад"""
         current_state = self.config["Auto_Сад"]
         self.config["Auto_Сад"] = "on" if current_state == "off" else "off"
         state_str = self.strings["auto_garden_on"] if self.config["Auto_Сад"] == "on" else self.strings["auto_garden_off"]
+        if self.config["Auto_Сад"] == "on":
+            await self._start_watchers()
+        else:
+            await self._stop_watcher("garden")
         await utils.answer(message, state_str)
 
-    async def пустошьcmd(self, message: TelethonMessage):
+    async def пустошьcmd(self, message):
         """Включить/выключить или показать статус Авто Пустошь"""
         current_state = self.config["Auto_Пустошь"]
         self.config["Auto_Пустошь"] = "on" if current_state == "off" else "off"
         state_str = self.strings["auto_wasteland_on"] if self.config["Auto_Пустошь"] == "on" else self.strings["auto_wasteland_off"]
+        if self.config["Auto_Пустошь"] == "on":
+            await self._start_watchers()
+        else:
+            await self._stop_watcher("wasteland")
         await utils.answer(message, state_str)
 
-    async def версияcmd(self, message: TelethonMessage):
+    async def логивыклcmd(self, message):
+        """Включить/выключить логирование ошибок Watcher"""
+        current_state = self.config["Log_Watcher_Errors"]
+        self.config["Log_Watcher_Errors"] = "on" if current_state == "off" else "off"
+        state_str = self.strings["log_watcher_on"] if self.config["Log_Watcher_Errors"] == "on" else self.strings["log_watcher_off"]
+        await utils.answer(message, state_str)
+
+    async def версияcmd(self, message):
         """Показать историю версий Shadow_Ultimat"""
         current_version_index = len(self.version_history) - 1
         version_info = self.version_history[current_version_index]
@@ -558,7 +715,7 @@ class Shadow_Ultimat(loader.Module):
             reply_markup=self._get_version_buttons(current_version_index)
         )
 
-    async def g5cmd(self, message: TelethonMessage):
+    async def g5cmd(self, message):
         """Показать статистику гильдии по бутылкам"""
         reply = await message.get_reply_message()
         if not reply:
@@ -737,7 +894,7 @@ class Shadow_Ultimat(loader.Module):
             ]
         )
 
-    async def влcmd(self, message: TelethonMessage):
+    async def влcmd(self, message):
         """Показывает количество людей и вместимость комнат."""
         reply = await message.get_reply_message()
         if not reply:
@@ -759,12 +916,10 @@ class Shadow_Ultimat(loader.Module):
         max_capacity = int(max_capacity.group(1))
         rooms_text = rooms_section.group(1).strip()
 
-        # Базовые вместимости комнат
         base_capacities = [6, 6, 6, 6, 12, 20, 32, 52, 92, 144, 234, 380, 520, 750, 1030, 1430, 2020, 3520]
         rooms = []
         open_rooms = 0
 
-        # Парсинг комнат из сообщения бота
         room_lines = rooms_text.split("\n")
         for line in room_lines:
             line = line.strip()
@@ -786,27 +941,24 @@ class Shadow_Ultimat(loader.Module):
                 if not room_num:
                     continue
                 warning = bool(match.group(2) or match.group(6))
-                if match.group(4):  # Комната открыта (указан уровень)
+                if match.group(4):
                     level = int(match.group(4))
                     capacity = base_capacities[room_num - 1] + 2 * (level - 1)
                     rooms.append({"num": room_num, "warning": warning, "capacity": capacity, "upgrade": ""})
                     open_rooms += 1
-                elif match.group(7):  # Комната закрыта (указана цена)
+                elif match.group(7):
                     capacity = base_capacities[room_num - 1]
                     rooms.append({"num": room_num, "warning": True, "capacity": capacity, "upgrade": ""})
                     open_rooms += 1
 
-        # Сортировка комнат по номеру
         rooms.sort(key=lambda x: x["num"])
 
-        # Определение комнат с минимальной вместимостью
         if rooms:
             min_capacity = min(room["capacity"] for room in rooms)
             for room in rooms:
                 if room["capacity"] == min_capacity:
                     room["upgrade"] = " 🆙"
 
-        # Формирование строки комнат
         rooms_str = ""
         for room in rooms:
             room_num = room["num"]
@@ -816,7 +968,6 @@ class Shadow_Ultimat(loader.Module):
             room_key = "room_inactive" if warning else "room_active"
             rooms_str += self.strings[room_key].format(room_num=room_num, capacity=capacity, upgrade=upgrade) + "\n"
 
-        # Предупреждение о переполнении
         overflow_warning = "⚠️ Бункер переполнен!\n║~$    Улучшите комнаты." if current_people > max_capacity else ""
 
         formatted_message = self.strings["capacity_template"].format(
@@ -830,18 +981,18 @@ class Shadow_Ultimat(loader.Module):
 
         await utils.answer(message, f"<blockquote>{formatted_message}</blockquote>", reply_to=reply)
 
-    async def очисткабдcmd(self, message: TelethonMessage):
+    async def очисткабдcmd(self, message):
         """Очистить базу данных модуля Shadow_Ultimat"""
         try:
-            # Список ключей, которые нужно удалить
             keys = [
                 "fuel_time", "people_time", "bonus_time", "greenhouse_time",
                 "guild_time", "mine_time", "garden_time", "wasteland_time"
             ]
             for key in keys:
-                self.db.pop("Shadow_Ultimat", key)  # Удаляем ключ без значения по умолчанию
+                self.db.pop("Shadow_Ultimat", key)
             await utils.answer(message, self.strings["db_cleared"])
         except Exception as e:
+            logger.error(f"Ошибка при очистке базы данных: {e}")
             await utils.answer(message, self.strings["db_clear_error"].format(error=str(e)))
 
     def format_number(self, number):
@@ -851,8 +1002,7 @@ class Shadow_Ultimat(loader.Module):
             result.append(number_str[max(0, i - 2):i + 1])
         return ".".join(reversed(result))
 
-    def _get_main_menu(self) -> typing.List[typing.List[dict]]:
-        """Возвращает разметку главного меню с инлайн кнопками в формате 4-4-3"""
+    def _get_main_menu(self):
         return [
             [
                 {"text": "🛢", "callback": self._show_section, "args": (1,)},
@@ -873,14 +1023,12 @@ class Shadow_Ultimat(loader.Module):
             ]
         ]
 
-    def _get_back_button(self) -> typing.List[typing.List[dict]]:
-        """Возвращает разметку с кнопкой 'Назад к гайду'"""
+    def _get_back_button(self):
         return [[
             {"text": self.strings["back_button"], "callback": self._show_main_menu}
         ]]
 
-    def _get_version_buttons(self, current_index: int) -> typing.List[typing.List[dict]]:
-        """Возвращает инлайн кнопки для навигации по версиям"""
+    def _get_version_buttons(self, current_index: int):
         buttons = []
         if current_index > 0:
             buttons.append({"text": self.strings["version_prev"], "callback": self._show_version, "args": (current_index - 1,)})
@@ -889,7 +1037,6 @@ class Shadow_Ultimat(loader.Module):
         return [buttons] if buttons else []
 
     async def _show_section(self, call: InlineCall, section_id: int):
-        """Обработчик нажатия на кнопку раздела"""
         section_text = self.formatted_strings[f"section_{section_id}"]
         await call.edit(
             f"<blockquote>{self.strings['header']}\n{section_text}</blockquote>",
@@ -897,14 +1044,12 @@ class Shadow_Ultimat(loader.Module):
         )
 
     async def _show_main_menu(self, call: InlineCall):
-        """Обработчик нажатия на кнопку 'Назад к гайду'"""
         await call.edit(
             f"<blockquote>{self.strings['header']}\n{self.strings['main_menu']}</blockquote>",
             reply_markup=self._get_main_menu()
         )
 
     async def _show_version(self, call: InlineCall, version_index: int):
-        """Обработчик нажатия на кнопки версий"""
         version_info = self.version_history[version_index]
         version_str = ".".join(map(str, version_info["version"]))
         message_text = (
