@@ -1,4 +1,4 @@
-__version__ = (7, 7, 7, 0, 1, 5)
+__version__ = (7, 7, 7, 0, 1, 7)
 # meta developer: @shadow_mod777
 
 import logging
@@ -11,6 +11,7 @@ from telethon.tl.functions.channels import InviteToChannelRequest, EditAdminRequ
 from telethon.tl.types import ChatAdminRights
 from .. import loader, utils
 from ..inline.types import InlineCall
+import html  # Добавлено для экранирования HTML
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -126,8 +127,8 @@ class Shadow_Ultimat(loader.Module):
         "auto_wasteland_off": "🏜 Авто Пустошь: ❌",
         "log_watcher_on": "📜 Логирование ошибок Watcher: ✅",
         "log_watcher_off": "📜 Логирование ошибок Watcher: ❌",
-        "version_prev": "⬅️ Предыдущая",
-        "version_next": "Следующая ➡️",
+        "debug_greenhouse_on": "🌱 Дебаг теплицы: ✅",
+        "debug_greenhouse_off": "🌱 Дебаг теплицы: ❌",
         "no_reply": "<b>Ответь на сообщение с информацией о бутылках!</b>",
         "invalid_multiplier": "<b>Второй аргумент должен быть числом!</b>",
         "capacity_template": (
@@ -158,7 +159,8 @@ class Shadow_Ultimat(loader.Module):
         "invalid_chat_id": "<b>Укажите корректный ID третьего чата (целое число) в настройках.</b>",
         "channel_creation_error": "<b>Ошибка при создании второго чата: {error}</b>",
         "greenhouse_error": "<b>Ошибка в авто-фарме теплицы: {error}</b>",
-        "no_resources_available": "<b>В теплице недостаточно воды или ресурсов для выращивания.</b>"
+        "no_resources_available": "<b>В теплице недостаточно воды или ресурсов для выращивания.</b>",
+        "invalid_resource": "<b>Не удалось определить доступный ресурс для выращивания.</b>"
     }
 
     class OnOffValidator(loader.validators.Validator):
@@ -220,18 +222,10 @@ class Shadow_Ultimat(loader.Module):
             loader.ConfigValue("Secondary_Chat_ID", 0, "ID второго чата для авто-фарма (заполняется автоматически при создании)"),
             loader.ConfigValue("Tertiary_Chat_ID", 0, "ID третьего чата для авто-фарма гильдии (атака ги/босса) (0 для отключения)"),
             loader.ConfigValue("Farm_Chat_Assignment", {}, "Распределение авто-фармов по чатам", validator=self.ChatAssignmentValidator()),
-            loader.ConfigValue("Log_Watcher_Errors", "on", "Включить/выключить логирование ошибок в Watcher (on/off)", validator=self.OnOffValidator())
+            loader.ConfigValue("Log_Watcher_Errors", "on", "Включить/выключить логирование ошибок в Watcher (on/off)", validator=self.OnOffValidator()),
+            loader.ConfigValue("Debug_Greenhouse", "off", "Включить/выключить дебаг-логирование теплицы (on/off)", validator=self.OnOffValidator())
         )
         self.bot = "@bfgbunker_bot"
-        self._resources_map = {
-            range(0, 501): "картошку",
-            range(501, 2001): "морковь",
-            range(2001, 10001): "рис",
-            range(10001, 25001): "свеклу",
-            range(25001, 60001): "огурец",
-            range(60001, 100001): "фасоль",
-            range(100001, 10**50): "помидор",
-        }
         self.formatted_strings = {}
         self.version_history = [
             {
@@ -282,7 +276,7 @@ class Shadow_Ultimat(loader.Module):
             {
                 "version": (7, 7, 7, 0, 0, 8),
                 "description": "Обновлен дизайн команды .вл с единым блоком цитирования и отправкой новым сообщением",
-                "formatted": "🗃 Обновлен дизайн команды <code>{prefix}вл</code> с единым блоком цитирования и отправкой new сообщением"
+                "formatted": "🗃 Обновлен дизайн команды <code>{prefix}вл</code> с единым блоком цитирования и отправкой новым сообщением"
             },
             {
                 "version": (7, 7, 7, 0, 0, 9),
@@ -307,7 +301,7 @@ class Shadow_Ultimat(loader.Module):
             {
                 "version": (7, 7, 7, 0, 1, 3),
                 "description": "Добавлено автоматическое создание второго чата для авто-фарма",
-                "formatted": "🗃 Добавлено автоматическое создание второго чата 'BFGB <SH-U2> - чат' для функций, назначенных на secondary"
+                "formatted": "🗃 Добавлено автоматическое создание второго чата 'BFGB SH-U2 - чат' для функций, назначенных на secondary"  # Обновлено название
             },
             {
                 "version": (7, 7, 7, 0, 1, 4),
@@ -318,6 +312,16 @@ class Shadow_Ultimat(loader.Module):
                 "version": (7, 7, 7, 0, 1, 5),
                 "description": "Добавлена команда .логивыкл для включения/выключения логирования ошибок Watcher",
                 "formatted": "🗃 Добавлена команда <code>{prefix}логивыкл</code> для управления логированием ошибок Watcher"
+            },
+            {
+                "version": (7, 7, 7, 0, 1, 6),
+                "description": "Исправлен выбор ресурса в авто-фарме теплицы, добавлено дебаг-логирование теплицы",
+                "formatted": "🗃 Исправлен выбор ресурса в авто-фарме теплицы, добавлена настройка Debug_Greenhouse и команда <code>{prefix}дебагтеплица</code>"
+            },
+            {
+                "version": (7, 7, 7, 0, 1, 7),  # Новая версия
+                "description": "Исправлена ошибка TelegramBadRequest в .версия, улучшен парсинг ресурса в теплице",
+                "formatted": "🗃 Исправлена ошибка TelegramBadRequest в команде <code>{prefix}версия</code>, улучшен парсинг ресурса в авто-фарме теплицы"
             }
         ]
         self.result_list = []
@@ -343,7 +347,7 @@ class Shadow_Ultimat(loader.Module):
         try:
             self._BFGB_SHU2_channel, _ = await utils.asset_channel(
                 self.client,
-                "BFGB <SH-U2> - чат",
+                "BFGB SH-U2 - чат",  # Исправлено: убраны угловые скобки
                 "Этот чат предназначен для модуля SHADOW ULTIMATE от @familiarrrrrr",
                 silent=True,
                 archive=False,
@@ -487,28 +491,68 @@ class Shadow_Ultimat(loader.Module):
             await asyncio.sleep(2)
             await conv.send_message("Моя теплица")
             r = await conv.get_response()
-            green_exp_match = re.search(r"Опыт: (\d+)", r.raw_text)
             water_match = re.search(r"Вода: (\d+)/\d+", r.raw_text)
-            if not (green_exp_match and water_match):
+            resource_match = re.search(r"Тебе доступна:.*?\s*[^a-zA-Zа-яА-Я0-9]*\s*([a-zA-Zа-яА-Я]+)$", r.raw_text)  # Улучшенное регулярное выражение
+            if not (water_match and resource_match):
+                if self.config["Debug_Greenhouse"] == "on":  # Дебаг-лог
+                    logger.debug(f"Не удалось распознать воду или ресурс: {r.raw_text}")
                 await self.client.send_message("me", self.strings["no_resources_available"])
                 return
-            green_exp = int(green_exp_match.group(1))
             water = int(water_match.group(1))
-            # Определяем ресурс для выращивания
-            resource = next(resource for range_, resource in self._resources_map.items() if green_exp in range_)
+            resource = resource_match.group(1).lower()  # Например, "рис"
+            if self.config["Debug_Greenhouse"] == "on":  # Дебаг-лог
+                logger.debug(f"Теплица: вода={water}, доступный ресурс={resource}")
+            if not resource:
+                # Дефолтный выбор ресурса на основе опыта, если парсинг не удался
+                exp_match = re.search(r"Опыт: ([\d,]+)", r.raw_text)
+                if exp_match:
+                    exp = int(exp_match.group(1).replace(",", ""))
+                    resource = self._get_resource_by_exp(exp)
+                    if self.config["Debug_Greenhouse"] == "on":
+                        logger.debug(f"Ресурс выбран по опыту ({exp}): {resource}")
+                else:
+                    if self.config["Debug_Greenhouse"] == "on":
+                        logger.debug("Ресурс и опыт не определены")
+                    await self.client.send_message("me", self.strings["invalid_resource"])
+                    return
             # Выращиваем, пока есть вода
             while water > 0:
                 await asyncio.sleep(1.5)
                 await conv.send_message(f"вырастить {resource}")
                 r = await conv.get_response()
                 if "у тебя не хватает" in r.raw_text:
+                    if self.config["Debug_Greenhouse"] == "on":
+                        logger.debug(f"Недостаточно ресурсов для выращивания: {r.raw_text}")
                     break
                 if "успешно вырастил(-а)" in r.raw_text:
                     water -= 1
+                    if self.config["Debug_Greenhouse"] == "on":
+                        logger.debug(f"Успешно выращен {resource}, осталось воды: {water}")
+                else:
+                    if self.config["Debug_Greenhouse"] == "on":
+                        logger.debug(f"Неожиданный ответ при выращивании: {r.raw_text}")
+                    break
             await self.client(ReadMentionsRequest(self.bot))
         except Exception as e:
-            logger.error(f"Ошибка в авто-фарме теплицы: {e}")
+            if self.config["Debug_Greenhouse"] == "on":
+                logger.error(f"Ошибка в авто-фарме теплицы: {e}")
             await self.client.send_message("me", self.strings["greenhouse_error"].format(error=str(e)))
+
+    def _get_resource_by_exp(self, exp: int) -> str:
+        """Выбирает ресурс на основе опыта, если парсинг не удался"""
+        resources = [
+            (0, "картошка"),
+            (500, "морковь"),
+            (2000, "рис"),
+            (10000, "свекла"),
+            (25000, "огурец"),
+            (60000, "фасоль"),
+            (100000, "помидор")
+        ]
+        for min_exp, resource in reversed(resources):
+            if exp >= min_exp:
+                return resource
+        return "картошка"  # Дефолтное значение
 
     async def _guild(self, conv):
         """Метод для авто-фарма гильдии"""
@@ -699,6 +743,13 @@ class Shadow_Ultimat(loader.Module):
         state_str = self.strings["log_watcher_on"] if self.config["Log_Watcher_Errors"] == "on" else self.strings["log_watcher_off"]
         await utils.answer(message, state_str)
 
+    async def дебагтеплицаcmd(self, message):
+        """Включить/выключить дебаг-логирование теплицы"""
+        current_state = self.config["Debug_Greenhouse"]
+        self.config["Debug_Greenhouse"] = "on" if current_state == "off" else "off"
+        state_str = self.strings["debug_greenhouse_on"] if self.config["Debug_Greenhouse"] == "on" else self.strings["debug_greenhouse_off"]
+        await utils.answer(message, state_str)
+
     async def версияcmd(self, message):
         """Показать историю версий Shadow_Ultimat"""
         current_version_index = len(self.version_history) - 1
@@ -709,6 +760,8 @@ class Shadow_Ultimat(loader.Module):
             f"🛟: v{version_str}\n"
             f"{version_info['formatted']}"
         )
+        # Экранируем текст для предотвращения ошибок HTML
+        message_text = html.escape(message_text)
         await utils.answer(
             message,
             f"<blockquote>{message_text}</blockquote>",
@@ -824,6 +877,8 @@ class Shadow_Ultimat(loader.Module):
             f"╠═╣{self.prefix}g5 - стата в гильдии\n"
             "╚═══════════════════"
         )
+        # Экранируем текст
+        result_message = html.escape(result_message)
         await call.edit(
             f"<blockquote>{result_message}</blockquote>",
             reply_markup=[
@@ -854,6 +909,8 @@ class Shadow_Ultimat(loader.Module):
             f"╠═╣{self.prefix}g5 - стата в гильдии\n"
             "╚═══════════════════"
         )
+        # Экранируем текст
+        result_message = html.escape(result_message)
         await call.edit(
             f"<blockquote>{result_message}</blockquote>",
             reply_markup=[
@@ -884,6 +941,8 @@ class Shadow_Ultimat(loader.Module):
             f"╠═╣{self.prefix}g5 - стата в гильдии\n"
             "╚═══════════════════"
         )
+        # Экранируем текст
+        result_message = html.escape(result_message)
         await call.edit(
             f"<blockquote>{result_message}</blockquote>",
             reply_markup=[
@@ -1038,14 +1097,18 @@ class Shadow_Ultimat(loader.Module):
 
     async def _show_section(self, call: InlineCall, section_id: int):
         section_text = self.formatted_strings[f"section_{section_id}"]
+        # Экранируем текст
+        section_text = html.escape(section_text)
         await call.edit(
             f"<blockquote>{self.strings['header']}\n{section_text}</blockquote>",
             reply_markup=self._get_back_button()
         )
 
     async def _show_main_menu(self, call: InlineCall):
+        # Экранируем текст
+        main_menu_text = html.escape(self.strings['main_menu'])
         await call.edit(
-            f"<blockquote>{self.strings['header']}\n{self.strings['main_menu']}</blockquote>",
+            f"<blockquote>{self.strings['header']}\n{main_menu_text}</blockquote>",
             reply_markup=self._get_main_menu()
         )
 
@@ -1057,6 +1120,8 @@ class Shadow_Ultimat(loader.Module):
             f"🛟: v{version_str}\n"
             f"{version_info['formatted']}"
         )
+        # Экранируем текст
+        message_text = html.escape(message_text)
         await call.edit(
             f"<blockquote>{message_text}</blockquote>",
             reply_markup=self._get_version_buttons(version_index)
