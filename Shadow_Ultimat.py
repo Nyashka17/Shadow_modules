@@ -1,4 +1,4 @@
-__version__ = (7, 7, 7, 0, 1, 9)
+__version__ = (7, 7, 7, 0, 2, 1)
 # meta developer: @shadow_mod777
 
 import logging
@@ -7,9 +7,8 @@ import asyncio
 import typing
 import re
 import html
-import aiohttp
 from telethon.tl.functions.messages import ReadMentionsRequest
-from telethon.tl.functions.channels import InviteToChannelRequest, EditAdminRequest, EditPhotoRequest
+from telethon.tl.functions.channels import InviteToChannelRequest, EditAdminRequest
 from telethon.tl.types import ChatAdminRights
 from .. import loader, utils
 from ..inline.types import InlineCall
@@ -163,8 +162,7 @@ class Shadow_Ultimat(loader.Module):
         "channel_creation_error": "<b>Ошибка при создании второго чата: {error}</b>",
         "greenhouse_error": "<b>Ошибка в авто-фарме теплицы: {error}</b>",
         "no_resources_available": "<b>В теплице недостаточно воды или ресурсов для выращивания.</b>",
-        "invalid_resource": "<b>Не удалось определить доступный ресурс для выращивания.</b>",
-        "photo_upload_error": "<b>Ошибка при загрузке фотографии чата: {error}</b>"
+        "invalid_resource": "<b>Не удалось определить доступный ресурс для выращивания.</b>"
     }
 
     class OnOffValidator(loader.validators.Validator):
@@ -336,6 +334,16 @@ class Shadow_Ultimat(loader.Module):
                 "version": (7, 7, 7, 0, 1, 9),
                 "description": "Добавлены правильные названия ресурсов для команды 'вырастить' в авто-фарме теплицы",
                 "formatted": "🗃 Добавлены правильные названия ресурсов (например, 'вырастить свеклу') для авто-фарма теплицы"
+            },
+            {
+                "version": (7, 7, 7, 0, 2, 0),
+                "description": "Исправлена ошибка загрузки фотографии чата и парсинг ресурса в теплице с учетом эмодзи",
+                "formatted": "🗃 Исправлена ошибка загрузки фотографии чата и улучшен парсинг ресурса в теплице с учетом эмодзи"
+            },
+            {
+                "version": (7, 7, 7, 0, 2, 1),
+                "description": "Удалена загрузка фотографии чата, обновлен парсинг ресурса в теплице, добавлены эмодзи в список ресурсов",
+                "formatted": "🗃 Удалена загрузка фотографии чата, улучшен парсинг ресурса в теплице, добавлены эмодзи в список ресурсов"
             }
         ]
         self.result_list = []
@@ -347,8 +355,8 @@ class Shadow_Ultimat(loader.Module):
         self.total_bottles_str = ""
         self.total_monday_bottles_str = ""
         self.total_five_percent_bonus_str = ""
-        self.tasks = {}  # Для хранения задач авто-фарма
-        self._BFGB_SHU2_channel = None  # Для хранения объекта второго чата
+        self.tasks = {}
+        self._BFGB_SHU2_channel = None
 
     async def client_ready(self, client, db):
         self.client = client
@@ -374,27 +382,6 @@ class Shadow_Ultimat(loader.Module):
                 admin_rights=ChatAdminRights(ban_users=True, post_messages=True, edit_messages=True),
                 rank="Bfgbunker_SH",
             ))
-            # Загрузка и установка фотографии чата
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get("https://pomf2.lain.la/f/y462rulm.jpg") as response:
-                        if response.status == 200:
-                            photo_data = await response.read()
-                            # Загружаем изображение в Telegram
-                            uploaded_photo = await self.client.upload_file(photo_data)
-                            # Устанавливаем фото для чата
-                            await self.client(EditPhotoRequest(
-                                channel=self._BFGB_SHU2_channel,
-                                photo=uploaded_photo
-                            ))
-                        else:
-                            if self.config["Log_Watcher_Errors"] == "on":
-                                logger.error(f"Не удалось загрузить фотографию чата: HTTP {response.status}")
-                            await self.client.send_message("me", self.strings["photo_upload_error"].format(error=f"HTTP {response.status}"))
-            except Exception as e:
-                if self.config["Log_Watcher_Errors"] == "on":
-                    logger.error(f"Ошибка при загрузке фотографии чата: {e}")
-                await self.client.send_message("me", self.strings["photo_upload_error"].format(error=str(e)))
             # Сохраняем ID созданного чата в конфигурацию
             self.config["Secondary_Chat_ID"] = self._BFGB_SHU2_channel.id
         except Exception as e:
@@ -530,7 +517,8 @@ class Shadow_Ultimat(loader.Module):
             await conv.send_message("Моя теплица")
             r = await conv.get_response()
             water_match = re.search(r"Вода: (\d+)/\d+", r.raw_text)
-            resource_match = re.search(r"Тебе доступна:.*?\s*[^a-zA-Zа-яА-Я0-9]*\s*([a-zA-Zа-яА-Я]+)$", r.raw_text)
+            # Обновленное регулярное выражение для учета эмодзи
+            resource_match = re.search(r"Тебе доступна:.*?\s*(?:[\U0001F300-\U0001F5FF]?\s*)?([а-яА-Я]+)", r.raw_text)
             if not (water_match and resource_match):
                 if self.config["Debug_Greenhouse"] == "on":
                     logger.debug(f"Не удалось распознать воду или ресурс: {r.raw_text}")
@@ -588,13 +576,13 @@ class Shadow_Ultimat(loader.Module):
     def _get_resource_by_exp(self, exp: int) -> str:
         """Выбирает ресурс на основе опыта, если парсинг не удался"""
         resources = [
-            (0, "картошка", "картошку"),
-            (500, "морковь", "морковь"),
-            (2000, "рис", "рис"),
-            (10000, "свекла", "свеклу"),
-            (25000, "огурец", "огурец"),
-            (60000, "фасоль", "фасоль"),
-            (100000, "помидор", "помидор")
+            (0, "🥔 картошка", "картошку"),
+            (500, "🥕 морковь", "морковь"),
+            (2000, "🍚 рис", "рис"),
+            (10000, "🍠 свекла", "свеклу"),
+            (25000, "🥒 огурец", "огурец"),
+            (60000, "🫘 фасоль", "фасоль"),
+            (100000, "🍅 помидор", "помидор")
         ]
         for min_exp, resource, command_name in reversed(resources):
             if exp >= min_exp:
